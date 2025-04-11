@@ -3,6 +3,7 @@ import java.util.*;
 public class HDBManager extends User{
     private List<BTOProject> projectsCreated;
     private static final int MAX_OFFICERS_PROJECT = 10;
+    private BTOProject handlingProject;
 
     // Constructor
     public HDBManager(String name, String nric, int age, MaritalStatus maritalStatus) {
@@ -115,7 +116,7 @@ public class HDBManager extends User{
         }
     }
 
-    public void viewCreatedProjects(){
+    public void viewOwnCreatedProjects(){
         List<BTOProject> createdProjects = this.getProjectsCreated();
         if (createdProjects.isEmpty()) {
             System.out.println("No BTO projects have been created by you yet.");
@@ -127,13 +128,13 @@ public class HDBManager extends User{
         }
     }
 
-    public void changeProjectVisibility(BTOProject project, boolean visibility) {
-        if (projectsCreated.contains(project)) {
-            project.setVisibility(visibility);
-            System.out.println("Project " + project.getName() + " visibility set to " + (visibility ? "ON" : "OFF"));
-        } else {
-            System.out.println("Error: Project not found.");
+    public void changeHandlingProjectVisibility(boolean visibility) {
+        if (this.handlingProject == null){
+            System.out.println("You have not assigned to a project yet.");
+            return;
         }
+        this.handlingProject.setVisibility(visibility);
+        System.out.println("Project " + this.handlingProject.getName() + " visibility set to " + (visibility ? "ON" : "OFF"));
     }
 
     public void viewAllProjects() {
@@ -159,33 +160,30 @@ public class HDBManager extends User{
     }
 
     public void handleOfficerRegistration(RegistrationApplication registrationApplication, RegisterStatus newStatus) {
-        boolean registrationFound = false;
-        for (BTOProject createdProject : projectsCreated){
-            if (createdProject.getOfficerApplications().contains(registrationApplication)){
-                registrationFound = true;
-                break;
-            }
+        if (this.handlingProject == null) {
+            System.out.println("You have not been assigned to a project yet!");
+            return;
         }
-        if (!registrationFound){
+        if (!handlingProject.getOfficerApplications().contains(registrationApplication)) {
             System.out.println("You are not eligible to handle this application!");
             return;
         }
-        if (newStatus == RegisterStatus.Successful){
-            BTOProject project = registrationApplication.getProjectApplied();
-            if (project.getOfficers().size() >= project.getMaxOfficers()) {
+        if (newStatus == RegisterStatus.Successful) {
+            if (handlingProject.getOfficers().size() >= handlingProject.getMaxOfficers()) {
                 System.out.println("Cannot approve application: max number of officers already assigned.");
                 return;
             }
             registrationApplication.setRegisterStatusStatus(RegisterStatus.Successful);
-            project.addOfficer(registrationApplication.getOfficer());
+            handlingProject.addOfficer(registrationApplication.getOfficer());
             System.out.println("Application for " + registrationApplication.getOfficer().getNRIC() + " has been approved.");
-        } else if (newStatus == RegisterStatus.Unsuccessful){
+        } else if (newStatus == RegisterStatus.Unsuccessful) {
             registrationApplication.setRegisterStatusStatus(RegisterStatus.Unsuccessful);
             System.out.println("Application for " + registrationApplication.getOfficer().getNRIC() + " has been rejected.");
         } else {
             System.out.println("Invalid application status.");
         }
     }
+
 
     public void handleApplication(Application application, ApplicationStatus newStatus) {
         if (application.getApplicationStatus() == ApplicationStatus.Successful || application.getApplicationStatus() == ApplicationStatus.Unsuccessful || application.getApplicationStatus() == ApplicationStatus.Booked){
@@ -229,7 +227,7 @@ public class HDBManager extends User{
         }
     }
 
-    public void viewEnquiries(){
+    public void viewAllEnquiries(){
         List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
         for (BTOProject project : allProjects){
             List<Enquiry> enquiries = project.getEnquiries();
@@ -237,6 +235,26 @@ public class HDBManager extends User{
                 System.out.println(enquiry.getEnquiryDetails());
             }
         }
+    }
+
+    public void viewOwnEnquiries(){
+        List<Enquiry> enquiries = this.handlingProject.getEnquiries();
+        for (Enquiry enquiry : enquiries){
+            System.out.println(enquiry.getEnquiryDetails());
+        }
+    }
+
+    public void replyEnquiry(Enquiry enquiry, String response){
+        if (this.handlingProject == null) {
+            System.out.println("You are not assigned to any project.");
+            return;
+        }
+        if (!this.handlingProject.getEnquiries().contains(enquiry)) {
+            System.out.println("This enquiry does not belong to your handling project.");
+            return;
+        }
+        enquiry.setReplyText(response);
+        System.out.println("Reply sent to applicant: " + response);
     }
 }
 

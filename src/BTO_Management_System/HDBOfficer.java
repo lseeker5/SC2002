@@ -85,7 +85,7 @@ public class HDBOfficer extends Applicant {
         System.out.println("Successfully applied for project: " + project.getName());
     }
 
-    public void viewProjectDetails(){
+    public void viewHandlingProjectDetails(){
         if (this.handlingProject == null){
             System.out.println("You do not have a handling project!");
             return;
@@ -93,8 +93,7 @@ public class HDBOfficer extends Applicant {
         System.out.println(this.handlingProject.getDetails());
     }
 
-    @Override
-    public void showAllEnquiries() {
+    public void showAllHandlingProjectEnquiries() {
         if (this.handlingProject == null) {
             System.out.println("You are not assigned to any project yet!");
             return;
@@ -102,7 +101,7 @@ public class HDBOfficer extends Applicant {
         this.handlingProject.showEnquiries();
     }
 
-    public void viewEnquiry(Enquiry enquiry){
+    public void viewHandlingProjectEnquiry(Enquiry enquiry){
         if (this.handlingProject == null) {
             System.out.println("You are not assigned to any project.");
             return;
@@ -114,7 +113,7 @@ public class HDBOfficer extends Applicant {
         System.out.println(enquiry.getEnquiryDetails());
     }
 
-    public void replyEnquiry(Enquiry enquiry, String response){
+    public void replyHandlingProjectEnquiry(Enquiry enquiry, String response){
         if (this.handlingProject == null) {
             System.out.println("You are not assigned to any project.");
             return;

@@ -42,7 +42,6 @@ public class Applicant extends User {
         return false;
     }
 
-
     public void viewAvailableProjects() {
         if (!projectIsVisible) {
             System.out.println("You are not allowed to view the projects yet!");
@@ -69,6 +68,14 @@ public class Applicant extends User {
         application = new Application(this, project, ApplicationStatus.Pending, flatType);
         project.getApplications().add(application);
         System.out.println("Successfully applied for project: " + project.getName());
+    }
+
+    public void viewAppliedProjects() {
+        if (this.application == null){
+            System.out.println("You have not applied to any project yet!");
+            return;
+        }
+        System.out.println(this.application.getProjectApplied().getDetails());
     }
 
     public void requestWithdrawApplication() {
@@ -99,7 +106,7 @@ public class Applicant extends User {
         System.out.println("Enquiry submitted. ID: " + newEnquiry.getEnquiryId());
     }
 
-    public void showAllEnquiries() {
+    public void showAllPersonalEnquiries() {
         if (enquiries.isEmpty()) {
             System.out.println("You have no enquiries yet!");
             return;
