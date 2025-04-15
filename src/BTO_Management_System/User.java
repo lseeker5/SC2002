@@ -17,6 +17,7 @@ public abstract class User {
 
     public void setPassword(String newPassword) {
         this.password = newPassword;
+        System.out.println("You have successfully updated your password");
     }
 
     public String getName() {

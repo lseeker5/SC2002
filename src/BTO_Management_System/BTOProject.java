@@ -182,11 +182,7 @@ public class BTOProject {
 
     public void showEnquiries() {
         List<Enquiry> enquiries = this.getEnquiries();
-        if (enquiries.isEmpty()) {
-            System.out.println("No enquiries to handle.");
-            return;
-        }
-        System.out.println("Handling the following enquiries for project: " + this.getName());
+        System.out.println("All enquiries for project: " + this.getName() + " are as follows");
         for (Enquiry enquiry : enquiries) {
             System.out.println(enquiry.getEnquiryDetails());
         }

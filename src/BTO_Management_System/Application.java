@@ -1,6 +1,8 @@
 package BTO_Management_System;
 
 public class Application {
+    private static int counter = 1;
+    private int applicationId;
     private Applicant applicant;
     private BTOProject projectApplied;
     private ApplicationStatus applicationStatus;
@@ -9,10 +11,19 @@ public class Application {
     private boolean withdrawalApproved = false;
 
     public Application(Applicant applicant, BTOProject projectApplied, ApplicationStatus applicationStatus, FlatType appliedFlatType) {
+        this.applicationId = counter++;
         this.applicant = applicant;
         this.projectApplied = projectApplied;
         this.applicationStatus = applicationStatus;
         this.appliedFlatType = appliedFlatType;
+    }
+
+    public int getApplicationId() {
+        return applicationId;
+    }
+
+    public void setApplicationId(int applicationId) {
+        this.applicationId = applicationId;
     }
 
     public FlatType getAppliedFlatType() {

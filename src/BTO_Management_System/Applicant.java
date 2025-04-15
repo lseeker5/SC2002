@@ -1,9 +1,6 @@
 package BTO_Management_System;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class Applicant extends User {
     protected Application application;
@@ -19,10 +16,16 @@ public class Applicant extends User {
         return "Applicant";
     }
 
-    public List<BTOProject> getAvailableProjects() {
+    public List<Enquiry> getEnquiries() {
+        return enquiries;
+    }
+
+    //Private Methods (helpers)
+
+    private List<BTOProject> getAvailableProjects() {
         List<BTOProject> filtered = new ArrayList<>();
         for (BTOProject project : ProjectRegistry.getAllProjects()) {
-            if (isEligibleToApply(project)) {
+            if (isEligibleToApply(project) && project.isVisible()) {
                 filtered.add(project);
             }
         }
@@ -50,7 +53,7 @@ public class Applicant extends User {
         }
     }
 
-    public void apply(BTOProject project, FlatType flatType) {
+    protected void apply(BTOProject project, FlatType flatType) {
         if (application != null) {
             System.out.println("You already have an application!");
             return;
@@ -85,15 +88,16 @@ public class Applicant extends User {
         System.out.println("Successfully applied for project: " + project.getName() + " - " + flatType);
     }
 
-    public void viewAppliedProjects() {
-        if (this.application == null){
-            System.out.println("You have not applied to any project yet!");
+    public void viewAppliedProject() {
+        if (application == null || application.getApplicationStatus() == null) {
+            System.out.println("You have not applied for any project yet!");
             return;
         }
-        System.out.println(this.application.getProjectApplied().getDetails());
+        System.out.println("Your applied project information is as follows:");
+        System.out.println(application.getProjectApplied().getDetails());
     }
 
-    public void getApplicationStatus(){
+    public void viewApplicationStatus(){
         if (this.application == null){
             System.out.println("You have not applied to any project yet!");
             return;
@@ -102,7 +106,7 @@ public class Applicant extends User {
         System.out.println("Your current application status for project " + this.application.getProjectApplied() + " is:" + currentStatus);
     }
 
-    public void requestWithdrawApplication() {
+    private void requestWithdrawApplication() {
         if (application == null) {
             System.out.println("You do not have any application yet!");
             return;
@@ -119,6 +123,10 @@ public class Applicant extends User {
         System.out.println("Your withdrawal request has been submitted and is pending manager approval.");
     }
 
+    private boolean enquiryIsEmpty(){
+        return enquiries.isEmpty();
+    }
+
     public void submitEnquiry(BTOProject project, String enquiryText) {
         List<BTOProject> availableProjects = getAvailableProjects();
         if (!availableProjects.contains(project)) {
@@ -131,19 +139,24 @@ public class Applicant extends User {
         System.out.println("Enquiry submitted. ID: " + newEnquiry.getEnquiryId());
     }
 
-    public void showAllPersonalEnquiries() {
-        if (enquiries.isEmpty()) {
-            System.out.println("You have no enquiries yet!");
-            return;
-        }
-        System.out.println("Your Enquiries are as follows:");
+    private void showAllPersonalEnquiries() {
+        System.out.println("The following are all your enquiries:");
         for (int i = 0; i < enquiries.size(); i++) {
             Enquiry enquiry = enquiries.get(i);
             System.out.println((i + 1) + ". " + enquiry.getEnquiryDetails());
         }
     }
 
-    public void editEnquiry(int enquiryId, String newText) {
+    private boolean containsEnquiry(int enquiryId){
+        for (Enquiry enquiry : enquiries){
+            if (enquiry.getEnquiryId() == enquiryId){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void editEnquiry(int enquiryId, String newText) {
         for (Enquiry e : enquiries) {
             if (e.getEnquiryId() == enquiryId) {
                 e.updateEnquiry(newText);
@@ -151,44 +164,205 @@ public class Applicant extends User {
                 return;
             }
         }
-        System.out.println("Invalid enquiry ID!");
     }
 
-    public void viewEnquiryReplies() {
-        if (enquiries.isEmpty()) {
-            System.out.println("You have no enquiries yet.");
-            return;
-        }
-        System.out.println("Here are your enquiries and replies:");
+    private void viewEnquiryReply(int enquiryId) {
+        System.out.println("Your enquiry reply information for enquiry: " + enquiryId + " is as follows:");
         for (Enquiry enquiry : enquiries) {
-            System.out.println(enquiry.getEnquiryDetails());
-            if (enquiry.getReplyText() != null) {
-                System.out.println("Officer Reply: " + enquiry.getReplyText());
-            } else {
-                System.out.println("No reply from officer yet.");
+            if (enquiry.getEnquiryId() == enquiryId){
+                if (enquiry.getReplyText() != null) {
+                    System.out.println("Officer Reply: " + enquiry.getReplyText());
+                } else {
+                    System.out.println("No reply from officer yet.");
+                }
+                return;
             }
         }
     }
 
-    public void deleteEnquiry(int enquiryId) {
+    private void deleteEnquiry(int enquiryId) {
         Iterator<Enquiry> iterator = enquiries.iterator();
         while (iterator.hasNext()) {
             Enquiry e = iterator.next();
             if (e.getEnquiryId() == enquiryId) {
                 e.getProject().deleteEnquiry(e);
                 iterator.remove();
-                System.out.println("Enquiry deleted: " + enquiryId);
+                System.out.println("You have successfully deleted enquiry " + enquiryId);
                 return;
             }
         }
-        System.out.println("Invalid enquiry ID!");
     }
 
-    public void viewAppliedProject() {
-        if (application == null || application.getApplicationStatus() == null) {
-            System.out.println("You have not applied for any project yet!");
+    // Main UI methods
+
+    public void handleViewAvailableProjects(){
+        viewAvailableProjects();
+    }
+
+    public void handleViewApplicationStatus(){
+        viewApplicationStatus();
+    }
+
+    public void handleViewAppliedProject(){
+        viewAppliedProject();
+    }
+    public void handleApplyForProject(Scanner scanner) {
+        System.out.println("\n--- Apply for Project ---");
+        viewAvailableProjects();
+        System.out.print("Enter the name of the project to apply: ");
+        String projectName = scanner.nextLine();
+        BTOProject targetProject = ProjectRegistry.findProject(projectName);
+
+        if (targetProject == null) {
+            System.out.println("Error: Invalid project name.");
             return;
         }
-        System.out.println(application.getProjectApplied().getDetails());
+
+        System.out.print("Enter the number of rooms (2 / 3): ");
+        if (scanner.hasNextInt()) {
+            int numRooms = scanner.nextInt();
+            scanner.nextLine();
+            FlatType flatType = null;
+            if (numRooms == 2) {
+                flatType = FlatType.TWOROOM;
+            } else if (numRooms == 3) {
+                flatType = FlatType.THREEROOM;
+            } else {
+                System.out.println("Error: Invalid room number. Please enter 2 or 3.");
+                return;
+            }
+            apply(targetProject, flatType);
+        } else {
+            System.out.println("Error: Invalid input for room number.");
+            scanner.nextLine();
+        }
     }
+
+    public void handleSubmitEnquiry(Scanner scanner) {
+        System.out.println("\n--- Submit Enquiry ---");
+        System.out.print("Enter the name of the project for your enquiry: ");
+        String projectName = scanner.nextLine();
+        BTOProject targetProject = ProjectRegistry.findProject(projectName);
+
+        if (targetProject == null) {
+            System.out.println("Error: Invalid project name.");
+            return;
+        }
+
+        System.out.println("Please enter the text of your enquiry:");
+        String enquiryText = scanner.nextLine();
+        submitEnquiry(targetProject, enquiryText);
+    }
+
+    public void handleManageEnquiries(Scanner scanner) {
+        if (enquiryIsEmpty()) {
+            System.out.println("You have no enquiries yet!");
+            return;
+        }
+
+        int choice;
+        do {
+            System.out.println("\n--- Manage Enquiries ---");
+            showAllPersonalEnquiries();
+            System.out.println("Choose an action:");
+            System.out.println("1. Edit Enquiry");
+            System.out.println("2. Delete Enquiry");
+            System.out.println("3. View Enquiry Reply");
+            System.out.println("0. Back to Main Menu");
+            System.out.print("Enter your choice: ");
+
+            if (scanner.hasNextInt()) {
+                choice = scanner.nextInt();
+                scanner.nextLine(); // Consume newline
+
+                switch (choice) {
+                    case 1:
+                        handleEditEnquiry(scanner);
+                        break;
+                    case 2:
+                        handleDeleteEnquiry(scanner);
+                        break;
+                    case 3:
+                        handleViewEnquiryReply(scanner);
+                        break;
+                    case 0:
+                        return;
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                }
+            } else {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.nextLine(); // Consume invalid input
+                choice = -1; // To continue the loop
+            }
+        } while (true);
+    }
+
+    private void handleEditEnquiry(Scanner scanner) {
+        System.out.println("\n--- Edit Enquiry ---");
+        showAllPersonalEnquiries();
+        System.out.print("Enter the ID of the enquiry you want to edit: ");
+        if (scanner.hasNextInt()) {
+            int enquiryId = scanner.nextInt();
+            scanner.nextLine();
+            if (containsEnquiry(enquiryId)) {
+                System.out.print("Enter your updated enquiry text: ");
+                String newText = scanner.nextLine();
+                editEnquiry(enquiryId, newText);
+            } else {
+                System.out.println("Error: Invalid enquiry ID.");
+            }
+        } else {
+            System.out.println("Invalid input for enquiry ID.");
+            scanner.nextLine();
+        }
+    }
+
+    private void handleDeleteEnquiry(Scanner scanner) {
+        System.out.println("\n--- Delete Enquiry ---");
+        showAllPersonalEnquiries();
+        System.out.print("Enter the ID of the enquiry you want to delete: ");
+        if (scanner.hasNextInt()) {
+            int enquiryId = scanner.nextInt();
+            scanner.nextLine();
+            if (containsEnquiry(enquiryId)) {
+                deleteEnquiry(enquiryId);
+            } else {
+                System.out.println("Error: Invalid enquiry ID.");
+            }
+        } else {
+            System.out.println("Invalid input for enquiry ID.");
+            scanner.nextLine();
+        }
+    }
+
+    private void handleViewEnquiryReply(Scanner scanner) {
+        System.out.println("\n--- View Enquiry Reply ---");
+        showAllPersonalEnquiries();
+        System.out.print("Enter the ID of the enquiry you want to view the reply for: ");
+        if (scanner.hasNextInt()) {
+            int enquiryId = scanner.nextInt();
+            scanner.nextLine();
+            if (containsEnquiry(enquiryId)) {
+                viewEnquiryReply(enquiryId);
+            } else {
+                System.out.println("Error: Invalid enquiry ID.");
+            }
+        } else {
+            System.out.println("Invalid input for enquiry ID.");
+            scanner.nextLine();
+        }
+    }
+
+    public void handleRequestWithdrawal(Scanner scanner) {
+        System.out.println("\n--- Request Withdrawal ---");
+        System.out.print("Are you sure you want to request withdrawal? (yes/no): ");
+        String response = scanner.nextLine().trim().toLowerCase();
+        if (response.equals("yes")) {
+            requestWithdrawApplication();
+        } else {
+            System.out.println("Withdrawal request cancelled.");
+        }
+    }
+
 }

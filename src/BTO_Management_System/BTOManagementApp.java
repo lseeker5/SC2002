@@ -19,7 +19,6 @@ public class BTOManagementApp {
     private static final String OFFICERS_FILE = "officers.csv";
     private static final String MANAGERS_FILE = "managers.csv";
     private static final String PROJECTS_FILE = "projects.csv";
-    private static final Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) {
         System.out.println("Welcome to the BTO Management System Hub!");
@@ -27,6 +26,7 @@ public class BTOManagementApp {
         loadUsersFromFile(OFFICERS_FILE, "OFFICER");
         loadUsersFromFile(MANAGERS_FILE, "MANAGER");
         loadProjectsFromFile(PROJECTS_FILE);
+
         Scanner mainScanner = new Scanner(System.in);
         boolean running = true;
         while (running) {
@@ -35,22 +35,30 @@ public class BTOManagementApp {
                 System.out.println("\nLogin successful!");
                 System.out.println("Welcome, " + loggedInUser.getName() + " (Role: " + loggedInUser.getRole() + ")");
 
-                if (loggedInUser instanceof Applicant) {
+                if (loggedInUser.getRole().equals("Applicant")) {
                     showApplicantMenu((Applicant) loggedInUser, mainScanner);
-                } else if (loggedInUser instanceof HDBOfficer) {
+                } else if (loggedInUser.getRole().equals("Officer")) {
                     showOfficerMenu((HDBOfficer) loggedInUser, mainScanner);
-                } else if (loggedInUser instanceof HDBManager) {
+                } else if (loggedInUser.getRole().equals("Manager")){
                     showManagerMenu((HDBManager) loggedInUser, mainScanner);
                 }
             } else {
                 System.out.println("\nLogin failed.");
             }
+
             System.out.println("\nChoose an option:");
             System.out.println("1. Log in to another account");
             System.out.println("2. Quit the program");
             System.out.print("Enter your choice: ");
-            int mainChoice = mainScanner.nextInt();
-            mainScanner.nextLine();
+            int mainChoice = -1;
+            if (mainScanner.hasNextInt()) {
+                mainChoice = mainScanner.nextInt();
+                mainScanner.nextLine(); // Consume newline
+            } else {
+                System.out.println("Invalid input. Please enter a number.");
+                mainScanner.nextLine(); // Consume invalid input
+            }
+
             if (mainChoice == 2) {
                 running = false;
                 System.out.println("Exiting the BTO Management System.");
@@ -62,7 +70,7 @@ public class BTOManagementApp {
     private static void loadUsersFromFile(String filename, String role) {
         try (Scanner scanner = new Scanner(new File(filename))) {
             if (scanner.hasNextLine()) {
-                scanner.nextLine();
+                scanner.nextLine(); // Skip header
             }
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
@@ -70,8 +78,20 @@ public class BTOManagementApp {
                 if (parts.length == 4) {
                     String nric = parts[0].trim().toUpperCase();
                     String name = parts[1].trim();
-                    int age = Integer.parseInt(parts[2].trim());
-                    MaritalStatus maritalStatus = MaritalStatus.valueOf(parts[3].trim().toUpperCase());
+                    int age = -1;
+                    try {
+                        age = Integer.parseInt(parts[2].trim());
+                    } catch (NumberFormatException e) {
+                        System.out.println("Error parsing age in " + filename + ": " + parts[2]);
+                        continue; // Skip invalid entry
+                    }
+                    MaritalStatus maritalStatus = null;
+                    try {
+                        maritalStatus = MaritalStatus.valueOf(parts[3].trim().toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Invalid marital status in " + filename + ": " + parts[3]);
+                        continue; // Skip invalid entry
+                    }
 
                     if (isValidNric(nric)) {
                         switch (role.toUpperCase()) {
@@ -86,28 +106,22 @@ public class BTOManagementApp {
                                 break;
                         }
                     } else {
-                        System.out.println("Invalid NRIC in file " + filename + ": " + nric);
+                        System.out.println("Invalid NRIC in " + filename + ": " + nric);
                     }
                 } else {
-                    System.out.println("Invalid format in user file " + filename + " line: " + line);
+                    System.out.println("Invalid format in " + filename + " line: " + line);
                 }
             }
             System.out.println("Data loaded from " + filename);
         } catch (FileNotFoundException e) {
             System.out.println("Error: User data file '" + filename + "' not found.");
-        } catch (NumberFormatException e) {
-            System.out.println("Error parsing age in file " + filename + ": " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error parsing marital status in file " + filename + ": " + e.getMessage());
         }
     }
 
-    // Method to load project data from projects.csv
     private static void loadProjectsFromFile(String filename) {
         try (Scanner scanner = new Scanner(new File(filename))) {
-            // Skip header row if it exists
             if (scanner.hasNextLine()) {
-                scanner.nextLine();
+                scanner.nextLine(); // Skip header
             }
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
@@ -122,7 +136,7 @@ public class BTOManagementApp {
                             String[] typeCount = unit.split(":");
                             if (typeCount.length == 2) {
                                 try {
-                                    FlatType flatType = FlatType.valueOf(typeCount[0].trim().toUpperCase().replace("-", "_")); // Handle "2-Room" to "TWO_ROOM"
+                                    FlatType flatType = FlatType.valueOf(typeCount[0].trim().toUpperCase().replace("-", "_"));
                                     int count = Integer.parseInt(typeCount[1].trim());
                                     remainingUnits.put(flatType, count);
                                 } catch (IllegalArgumentException e) {
@@ -134,7 +148,13 @@ public class BTOManagementApp {
                         Date openDate = parseDate(parts[4].trim());
                         Date closeDate = parseDate(parts[5].trim());
                         String managerNRIC = parts[6].trim().toUpperCase();
-                        int maxOfficers = Integer.parseInt(parts[7].trim());
+                        int maxOfficers = -1;
+                        try {
+                            maxOfficers = Integer.parseInt(parts[7].trim());
+                        } catch (NumberFormatException e) {
+                            System.out.println("Invalid max officers: " + parts[7] + " in project " + name);
+                            continue; // Skip invalid entry
+                        }
 
                         HDBManager manager = null;
                         for (User user : users) {
@@ -151,10 +171,8 @@ public class BTOManagementApp {
                         } else {
                             System.out.println("Manager with NRIC " + managerNRIC + " not found for project " + name);
                         }
-                    } catch (NumberFormatException e) {
-                        System.out.println("Error parsing number in project data: " + line + " - " + e.getMessage());
                     } catch (IllegalArgumentException e) {
-                        System.out.println("Error parsing boolean or other argument in project data: " + line + " - " + e.getMessage());
+                        System.out.println("Error parsing project data: " + line + " - " + e.getMessage());
                     }
                 } else {
                     System.out.println("Invalid project data format: " + line);
@@ -198,7 +216,6 @@ public class BTOManagementApp {
         }
     }
 
-    // Helper method to validate NRIC format
     private static boolean isValidNric(String nric) {
         Pattern pattern = Pattern.compile("^[ST]\\d{7}[A-Z]$");
         Matcher matcher = pattern.matcher(nric);
@@ -225,72 +242,55 @@ public class BTOManagementApp {
     private static void showApplicantMenu(Applicant applicant, Scanner scanner) {
         int choice;
         do {
-            System.out.println("\nApplicant Menu:");
+            System.out.println("\n--- Applicant Menu ---");
             System.out.println("1. View Available Projects");
-            System.out.println("2. Apply for Project (Implementation Pending)");
-            System.out.println("3. View Application Status (Implementation Pending)");
-            System.out.println("4. Submit Enquiry (Implementation Pending)");
-            System.out.println("5. View Own Enquiries (Implementation Pending)");
-            System.out.println("6. Request Withdrawal (Implementation Pending)");
-            System.out.println("7. Change Password");
+            System.out.println("2. Apply for Project");
+            System.out.println("3. View Application Status");
+            System.out.println("4. View Applied Project Details");
+            System.out.println("5. Submit Enquiry");
+            System.out.println("6. Manage Enquiries (Edit/Delete/View)");
+            System.out.println("7. Request Withdrawal");
+            System.out.println("8. Change Password");
             System.out.println("0. Logout");
             System.out.print("Enter your choice: ");
-            choice = scanner.nextInt();
-            scanner.nextLine();
-
-            switch (choice) {
-                case 1:
-                    applicant.viewAvailableProjects();
-                    break;
-                case 2:
-                    System.out.println("\n--- Apply for Project ---");
-                    applicant.viewAvailableProjects();
-                    System.out.println("Please enter the project name to apply:");
-                    String enteredName1 = sc.nextLine();
-                    BTOProject targetProject1 = ProjectRegistry.findProject(enteredName1);
-                    if (targetProject1 == null){
-                        System.out.println("Error: Invalid project name.");
+            if (scanner.hasNextInt()) {
+                choice = scanner.nextInt();
+                scanner.nextLine();
+                switch (choice) {
+                    case 1:
+                        applicant.handleViewAvailableProjects();
                         break;
-                    }
-                    System.out.println("Please enter the number of rooms (2 / 3):");
-                    int num = sc.nextInt();
-                    if (num == 2){
-                        applicant.apply(targetProject1, FlatType.TWOROOM);
-                    } else if (num == 3){
-                        applicant.apply(targetProject1, FlatType.THREEROOM);
-                    } else {
-                        System.out.println("Error: Invalid room number.");
-                    }
-                    break;
-                case 3:
-                    applicant.getApplicationStatus();
-                    break;
-                case 4:
-                    System.out.println("Please enter the name of the project you prefer to enquire:");
-                    String enteredName2 = sc.nextLine();
-                    BTOProject targetProject2 = ProjectRegistry.findProject(enteredName2);
-                    if (targetProject2 == null){
-                        System.out.println("Error: Invalid project name.");
+                    case 2:
+                        applicant.handleApplyForProject(scanner);
                         break;
-                    }
-                    System.out.println("Please enter the text of your enquiry:\n");
-                    String enquiryText = sc.nextLine();
-                    applicant.submitEnquiry(targetProject2, enquiryText);
-                    break;
-                case 5:
-                    applicant.showAllPersonalEnquiries();
-                    break;
-                case 6:
-                    System.out.println("Feature to request withdrawal will be implemented here.");
-                    break;
-                case 7:
-                    changePassword(applicant, scanner);
-                    break;
-                case 0:
-                    System.out.println("Logging out...");
-                    return; // Go back to the main loop
-                default:
-                    System.out.println("Invalid choice. Please try again.");
+                    case 3:
+                        applicant.handleViewApplicationStatus();
+                        break;
+                    case 4:
+                        applicant.handleViewAppliedProject();
+                        break;
+                    case 5:
+                        applicant.handleSubmitEnquiry(scanner);
+                        break;
+                    case 6:
+                        applicant.handleManageEnquiries(scanner);
+                        break;
+                    case 7:
+                        applicant.handleRequestWithdrawal(scanner);
+                        break;
+                    case 8:
+                        changePassword(applicant, scanner);
+                        break;
+                    case 0:
+                        System.out.println("Logging out...");
+                        return;
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                }
+            } else {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.nextLine();
+                choice = -1; // To continue the loop
             }
         } while (true);
     }
@@ -299,52 +299,84 @@ public class BTOManagementApp {
         int choice;
         do {
             System.out.println("\nHDB Officer Menu:");
-            System.out.println("1. View Handling Project Details (Implementation Pending)");
-            System.out.println("2. Show All Handling Project Enquiries (Implementation Pending)");
-            System.out.println("3. View Handling Project Enquiry (Implementation Pending)");
-            System.out.println("4. Reply Handling Project Enquiry (Implementation Pending)");
-            System.out.println("5. Handle Application (Implementation Pending)");
-            System.out.println("6. Book Flat (Implementation Pending)");
-            System.out.println("7. Generate Receipt (Implementation Pending)");
-            System.out.println("8. Change Password");
+            System.out.println("--- Officer Actions ---");
+            System.out.println("1. View Handling Project Details");
+            System.out.println("2. Show All Handling Project Enquiries");
+            System.out.println("3. View Handling Project Enquiry");
+            System.out.println("4. Reply Handling Project Enquiry");
+            System.out.println("5. Book Flat");
+            System.out.println("6. Generate Receipt");
+            System.out.println("\n--- Applicant Actions (as Officer) ---");
+            System.out.println("10. View Available Projects");
+            System.out.println("11. Apply for Project");
+            System.out.println("12. View Application Status");
+            System.out.println("13. View Applied Project Details");
+            System.out.println("14. Submit Enquiry");
+            System.out.println("15. Manage Own Enquiries (Edit/Delete/View Reply)");
+            System.out.println("16. Request Withdrawal");
+
+            System.out.println("\n--- Common Actions ---");
+            System.out.println("20. Change Password");
             System.out.println("0. Logout");
             System.out.print("Enter your choice: ");
-            choice = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
-
-            switch (choice) {
-                case 1:
-                    System.out.println("Feature to view handling project details will be implemented here.");
-                    break;
-                case 2:
-                    System.out.println("Feature to show all handling project enquiries will be implemented here.");
-                    break;
-                case 3:
-                    System.out.println("Feature to view handling project enquiry will be implemented here.");
-                    break;
-                case 4:
-                    System.out.println("Feature to reply handling project enquiry will be implemented here.");
-                    break;
-                case 5:
-                    System.out.println("Feature to handle application will be implemented here.");
-                    break;
-                case 6:
-                    System.out.println("Feature to book flat will be implemented here.");
-                    break;
-                case 7:
-                    System.out.println("Feature to generate receipt will be implemented here.");
-                    break;
-                case 8:
-                    changePassword(officer, scanner);
-                    break;
-                case 0:
-                    System.out.println("Logging out...");
-                    return;
-                default:
-                    System.out.println("Invalid choice. Please try again.");
+            if (scanner.hasNextInt()) {
+                choice = scanner.nextInt();
+                scanner.nextLine(); // Consume newline
+                switch (choice) {
+                    case 1:
+                        officer.handleViewHandlingProjectDetails();
+                        break;
+                    case 2:
+                        officer.handleShowAllHandlingProjectEnquiries();
+                        break;
+                    case 3:
+                        officer.handleViewHandlingProjectEnquiry(scanner);
+                        break;
+                    case 4:
+                        officer.handleReplyHandlingProjectEnquiry(scanner);
+                        break;
+                    case 5:
+                        officer.handleBookFlat(scanner);
+                        break;
+                    case 6:
+                        officer.handleGenerateReceipt(scanner);
+                        break;
+                    case 10:
+                        ((Applicant) officer).viewAvailableProjects();
+                        break;
+                    case 11:
+                        ((Applicant) officer).handleApplyForProject(scanner);
+                        break;
+                    case 12:
+                        ((Applicant) officer).viewApplicationStatus();
+                        break;
+                    case 13:
+                        ((Applicant) officer).viewAppliedProject();
+                        break;
+                    case 14:
+                        ((Applicant) officer).handleSubmitEnquiry(scanner);
+                        break;
+                    case 15:
+                        ((Applicant) officer).handleManageEnquiries(scanner);
+                        break;
+                    case 16:
+                        ((Applicant) officer).handleRequestWithdrawal(scanner);
+                        break;
+                    case 20:
+                        changePassword(officer, scanner);
+                        break;
+                    case 0:
+                        System.out.println("Logging out...");
+                        return;
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                }
+            } else {
+                System.out.println("Invalid input. Please enter a number.");
             }
         } while (true);
     }
+
 
     private static void showManagerMenu(HDBManager manager, Scanner scanner) {
         int choice;
