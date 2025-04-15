@@ -16,7 +16,7 @@ public class RegistrationApplication {
         if (this == another){
             return true;
         }
-        if (!(another instanceof HDBOfficer)){
+        if (!(another instanceof RegistrationApplication)){
             return false;
         }
         RegistrationApplication temp = (RegistrationApplication) another;
@@ -42,6 +42,4 @@ public class RegistrationApplication {
     public void setRegisterStatusStatus(RegisterStatus registerStatusStatus){
         this.registerStatusStatus = registerStatusStatus;
     }
-
-    // Constructor and methods for handling application details
 }

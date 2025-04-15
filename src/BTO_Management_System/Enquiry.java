@@ -46,7 +46,7 @@ public class Enquiry {
         if (this == obj) {
             return true;
         }
-        if (obj == null || !(obj instanceof BTOProject)) {
+        if (obj == null || !(obj instanceof Enquiry)) {
             return false;
         }
         Enquiry temp = (Enquiry) obj;

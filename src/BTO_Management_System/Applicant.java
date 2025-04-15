@@ -6,13 +6,11 @@ import java.util.Iterator;
 import java.util.List;
 
 public class Applicant extends User {
-    private boolean projectIsVisible;
     protected Application application;
     private List<Enquiry> enquiries;
 
     public Applicant(String name, String nric, int age, MaritalStatus maritalStatus) {
         super(name, nric, age, maritalStatus);
-        this.projectIsVisible = true;
         this.enquiries = new ArrayList<>();
     }
 
@@ -34,19 +32,15 @@ public class Applicant extends User {
 
     protected boolean isEligibleToApply(BTOProject project) {
         if (!project.isVisible()) return false;
-        if (age >= 35 && maritalStatus == MaritalStatus.single) {
-            return project.getFlatTypes().contains(FlatType.twoRoom); // Singles 35+ can only apply for 2-Room
-        } else if (age >= 21 && maritalStatus == MaritalStatus.married) {
-            return project.getFlatTypes().contains(FlatType.twoRoom) || project.getFlatTypes().contains(FlatType.threeRoom); // Married 21+ can apply for both
+        if (age >= 35 && maritalStatus == MaritalStatus.SINGLE) {
+            return project.getFlatTypes().contains(FlatType.TWOROOM);
+        } else if (age >= 21 && maritalStatus == MaritalStatus.MARRIED) {
+            return project.getFlatTypes().contains(FlatType.TWOROOM) || project.getFlatTypes().contains(FlatType.THREEROOM); // Married 21+ can apply for both
         }
         return false;
     }
 
     public void viewAvailableProjects() {
-        if (!projectIsVisible) {
-            System.out.println("You are not allowed to view the projects yet!");
-            return;
-        }
         List<BTOProject> availableProjects = getAvailableProjects();
         if (availableProjects.isEmpty()) {
             System.out.println("Sorry, there is no available project for you.");
@@ -62,12 +56,33 @@ public class Applicant extends User {
             return;
         }
         if (!getAvailableProjects().contains(project)) {
-            System.out.println("You are not allowed to apply for this project!");
+            System.out.println("You are not allowed to apply for this project based on your eligibility!");
             return;
         }
-        application = new Application(this, project, ApplicationStatus.Pending, flatType);
+        if (!project.getFlatTypes().contains(flatType)) {
+            System.out.println("The selected flat type (" + flatType + ") is not available for this project (" + project.getName() + ")!");
+            return;
+        }
+        if (!project.getRemainingUnits().containsKey(flatType) || project.getRemainingUnits().get(flatType) <= 0) {
+            System.out.println("The selected flat type (" + flatType + ") in project " + project.getName() + " is currently unavailable!");
+            return;
+        }
+        if (maritalStatus == MaritalStatus.SINGLE && age < 35) {
+            System.out.println("Single applicants must be 35 years old and above to apply.");
+            return;
+        }
+        else if (flatType != FlatType.TWOROOM) {
+            System.out.println("Singles 35 years old and above can only apply for 2-Room flats.");
+            return;
+        }
+        if (maritalStatus == MaritalStatus.MARRIED && age < 21) {
+            System.out.println("Married applicants must be 21 years old and above to apply.");
+            return;
+        }
+        application = new Application(this, project, ApplicationStatus.PENDING, flatType);
         project.getApplications().add(application);
-        System.out.println("Successfully applied for project: " + project.getName());
+        project.decrementRemainingUnits(flatType);
+        System.out.println("Successfully applied for project: " + project.getName() + " - " + flatType);
     }
 
     public void viewAppliedProjects() {
@@ -78,12 +93,21 @@ public class Applicant extends User {
         System.out.println(this.application.getProjectApplied().getDetails());
     }
 
+    public void getApplicationStatus(){
+        if (this.application == null){
+            System.out.println("You have not applied to any project yet!");
+            return;
+        }
+        ApplicationStatus currentStatus = this.application.getApplicationStatus();
+        System.out.println("Your current application status for project " + this.application.getProjectApplied() + " is:" + currentStatus);
+    }
+
     public void requestWithdrawApplication() {
         if (application == null) {
             System.out.println("You do not have any application yet!");
             return;
         }
-        if (application.getApplicationStatus() == ApplicationStatus.Booked) {
+        if (application.getApplicationStatus() == ApplicationStatus.BOOKED) {
             System.out.println("You cannot withdraw your application as it is already booked.");
             return;
         }
@@ -96,8 +120,9 @@ public class Applicant extends User {
     }
 
     public void submitEnquiry(BTOProject project, String enquiryText) {
-        if (!getAvailableProjects().contains(project)) {
-            System.out.println("Invalid or unavailable project!");
+        List<BTOProject> availableProjects = getAvailableProjects();
+        if (!availableProjects.contains(project)) {
+            System.out.println("Invalid or unavailable project for enquiry!");
             return;
         }
         Enquiry newEnquiry = new Enquiry(this, project, enquiryText);
@@ -111,7 +136,11 @@ public class Applicant extends User {
             System.out.println("You have no enquiries yet!");
             return;
         }
-        enquiries.forEach(e -> System.out.println(e.getEnquiryDetails()));
+        System.out.println("Your Enquiries are as follows:");
+        for (int i = 0; i < enquiries.size(); i++) {
+            Enquiry enquiry = enquiries.get(i);
+            System.out.println((i + 1) + ". " + enquiry.getEnquiryDetails());
+        }
     }
 
     public void editEnquiry(int enquiryId, String newText) {

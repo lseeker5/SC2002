@@ -5,7 +5,7 @@ import java.util.*;
 public class BTOProject {
     private String name;
     private String neighborhood;
-    private Map<FlatType, Integer> remainingUnits; // Map to track remaining units for each flat type
+    private Map<FlatType, Integer> remainingUnits;
     private boolean visibility;
     private Date applicationOpenDate;
     private Date applicationCloseDate;
@@ -65,6 +65,7 @@ public class BTOProject {
         return "Project: " + name + ", Neighborhood: " + neighborhood +
                 ", Remaining Units: " + remainingUnitsString;
     }
+
 
     public String getName() {
         return name;
@@ -191,12 +192,12 @@ public class BTOProject {
         }
     }
 
-    public void updateRemainingUnits(FlatType flatType) {
-        if (remainingUnits.containsKey(flatType)) {
+    public void decrementRemainingUnits(FlatType flatType) {
+        if (remainingUnits.containsKey(flatType) && remainingUnits.get(flatType) > 0) {
             remainingUnits.put(flatType, remainingUnits.get(flatType) - 1);
-            System.out.println("Remaining " + flatType + " units: " + remainingUnits.get(flatType));
+            System.out.println("Remaining units for " + flatType + " in " + this.name + " decreased to " + remainingUnits.get(flatType));
         } else {
-            System.out.println("Error: Flat type not found in remaining units.");
+            System.out.println("Error: Cannot decrement remaining units for " + flatType + " in " + this.name + ". Either no units left or flat type not found.");
         }
     }
 
@@ -207,5 +208,26 @@ public class BTOProject {
             }
         }
         return null;
+    }
+
+    public void addApplication(Application application) {
+        this.applications.add(application);
+    }
+
+    public void removeApplication(Application application) {
+        this.applications.remove(application);
+    }
+
+    public void updateApplicationStatus(Applicant applicant, ApplicationStatus newStatus) {
+        for (Application app : this.applications) {
+            if (app.getApplicant().equals(applicant)) {
+                app.setApplicationStatus(newStatus);
+                if (newStatus == ApplicationStatus.SUCCESSFUL) {
+                    this.successfulApplicants.add(applicant);
+                }
+                return;
+            }
+        }
+        System.out.println("Application not found for applicant: " + applicant.getName());
     }
 }

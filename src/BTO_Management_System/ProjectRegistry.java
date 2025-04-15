@@ -3,41 +3,9 @@ import java.util.*;
 
 public class ProjectRegistry {
     private static List<BTOProject> allProjects = new ArrayList<>();
-    private String location;
-    private FlatType flatType;
-    private boolean onlyVisibleProjects;
-
-    public ProjectRegistry() {
-        this.onlyVisibleProjects = true; // Default to showing only visible projects
-    }
-
-    // Setters
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
-    public void setFlatType(FlatType flatType) {
-        this.flatType = flatType;
-    }
-
-    public void setOnlyVisibleProjects(boolean onlyVisibleProjects) {
-        this.onlyVisibleProjects = onlyVisibleProjects;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public FlatType getFlatType() {
-        return flatType;
-    }
-
-    public boolean isOnlyVisibleProjects() {
-        return onlyVisibleProjects;
-    }
 
     public static List<BTOProject> getAllProjects() {
-        return allProjects;
+        return new ArrayList<>(allProjects); // Return a copy to prevent external modification
     }
 
     public static void addProject(BTOProject project) {
@@ -48,52 +16,34 @@ public class ProjectRegistry {
         allProjects.remove(project);
     }
 
-    public List<BTOProject> getVisibleProjects() {
-        List<BTOProject> visibleProjects = new ArrayList<>();
-        for (BTOProject project : allProjects) {
-            if (project.isVisible()) {
-                visibleProjects.add(project);
+    public static BTOProject findProject(String name){
+        for (BTOProject project : allProjects){
+            if (project.getName().equals(name)){
+                return project;
             }
         }
-        return visibleProjects;
+        return null;
     }
 
-    public List<BTOProject> getProjectsByNeighborhood(String neighborhood) {
-        List<BTOProject> filteredProjects = new ArrayList<>();
-        for (BTOProject project : allProjects) {
-            if (project.getNeighborhood().equals(neighborhood)) {
-                filteredProjects.add(project);
-            }
-        }
-        return filteredProjects;
+    public static List<BTOProject> getVisibleProjects() {
+        return allProjects.stream().filter(BTOProject::isVisible).toList();
     }
 
-    public List<BTOProject> getProjectsByFlatType(FlatType flatType) {
-        List<BTOProject> filteredProjects = new ArrayList<>();
-        for (BTOProject project : allProjects) {
-            if (project.getFlatTypes().contains(flatType)) {
-                filteredProjects.add(project);
-            }
-        }
-        return filteredProjects;
+    public static List<BTOProject> getProjectsByNeighborhood(String neighborhood) {
+        return allProjects.stream().filter(p -> p.getNeighborhood().equals(neighborhood)).toList();
     }
 
-    public List<BTOProject> getFilteredProjects() {
-        List<BTOProject> filteredProjects = new ArrayList<>(allProjects);
+    public static List<BTOProject> getProjectsByFlatType(FlatType flatType) {
+        return allProjects.stream().filter(p -> p.getFlatTypes().contains(flatType)).toList();
+    }
 
-        if (onlyVisibleProjects) {
-            filteredProjects.removeIf(project -> !project.isVisible());
-        }
-
-        if (location != null && !location.isEmpty()) {
-            filteredProjects.removeIf(project -> !project.getNeighborhood().equals(location));
-        }
-
-        if (flatType != null) {
-            filteredProjects.removeIf(project -> !project.getFlatTypes().contains(flatType));
-        }
-
-        return filteredProjects;
+    public static List<BTOProject> getFilteredProjects(String locationFilter, FlatType flatTypeFilter, boolean onlyVisible) {
+        return allProjects.stream()
+                .filter(p -> !onlyVisible || p.isVisible())
+                .filter(p -> locationFilter == null || locationFilter.isEmpty() || p.getNeighborhood().equals(locationFilter))
+                .filter(p -> flatTypeFilter == null || p.getFlatTypes().contains(flatTypeFilter))
+                .sorted(Comparator.comparing(BTOProject::getName)) // Default sort by name
+                .toList();
     }
 }
 

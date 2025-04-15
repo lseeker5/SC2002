@@ -15,11 +15,7 @@ public abstract class User {
         this.password = "password";  // default password
     }
 
-    public boolean login(String inputPassword) {
-        return this.password.equals(inputPassword);
-    }
-
-    public void changePassword(String newPassword) {
+    public void setPassword(String newPassword) {
         this.password = newPassword;
     }
 
@@ -29,6 +25,10 @@ public abstract class User {
 
     public String getNRIC() {
         return nric;
+    }
+
+    public String getPassword() {
+        return password;
     }
 
     public int getAge() {
@@ -41,4 +41,3 @@ public abstract class User {
 
     public abstract String getRole();
 }
-

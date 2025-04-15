@@ -8,6 +8,7 @@ public class HDBManager extends User{
     // Constructor
     public HDBManager(String name, String nric, int age, MaritalStatus maritalStatus) {
         super(name, nric, age, maritalStatus);
+        this.projectsCreated = new ArrayList<>(); // Initialize the list
     }
 
     @Override
@@ -39,65 +40,10 @@ public class HDBManager extends User{
             System.out.println("Maximum number of officers for a project cannot exceed 10.");
             return;
         }
-        Map<FlatType, Integer> map = new HashMap<>();
         BTOProject newProject = new BTOProject(name, neighborhood, remainingUnits, applicationOpenDate, applicationCloseDate, this, maxOfficers);
         this.projectsCreated.add(newProject);
         ProjectRegistry.addProject(newProject);
         System.out.println("New project created: " + name);
-    }
-
-    public void editProject(BTOProject project, String field) {
-        if (!projectsCreated.contains(project)) {
-            System.out.println("Error! The project is not created by you!");
-            return;
-        }
-        Scanner sc = new Scanner(System.in);
-        System.out.println("Enter the field you want to edit: ");
-        switch (field.toLowerCase()) {
-            case "name":
-                System.out.println("Please enter a new name: ");
-                String newName = sc.nextLine();
-                project.setName(newName);
-                break;
-            case "neighborhood":
-                System.out.println("Please enter a new neighborhood: ");
-                String newNeighborhood = sc.nextLine();
-                project.setNeighborhood(newNeighborhood);
-                break;
-            case "remainingunits":
-                System.out.println("Please enter the flat type to update units (e.g., 2-Room, 3-Room): ");
-                String flatTypeInput = sc.nextLine().toUpperCase();
-                FlatType flatType = FlatType.valueOf(flatTypeInput); // Assuming FlatType is an enum
-                System.out.println("Please enter the new remaining units for " + flatType + ": ");
-                int newRemainingUnits = sc.nextInt();
-                project.getRemainingUnits().put(flatType, newRemainingUnits);
-                break;
-            case "applicationopendate":
-                System.out.println("Please enter a new application open date (yyyy-mm-dd): ");
-                String openDateStr = sc.nextLine();
-                Date newOpenDate = parseDate(openDateStr);
-                if (newOpenDate != null) {
-                    project.setApplicationOpenDate(newOpenDate);
-                }
-                break;
-            case "applicationclosedate":
-                System.out.println("Please enter a new application close date (yyyy-mm-dd): ");
-                String closeDateStr = sc.nextLine();
-                Date newCloseDate = parseDate(closeDateStr);
-                if (newCloseDate != null) {
-                    project.setApplicationCloseDate(newCloseDate);
-                }
-                break;
-            case "visibility":
-                System.out.println("Would you like to toggle the visibility? (true/false): ");
-                boolean newVisibility = sc.nextBoolean();
-                project.setVisibility(newVisibility);
-                break;
-            default:
-                System.out.println("Invalid field! Please select a valid field to edit.");
-                break;
-        }
-        System.out.println("Project updated successfully!");
     }
 
     private Date parseDate(String s) {
@@ -110,6 +56,7 @@ public class HDBManager extends User{
     public void deleteProject(BTOProject project) {
         if (projectsCreated.contains(project)) {
             projectsCreated.remove(project);
+            ProjectRegistry.removeProject(project); // Add this line
             System.out.println("Project " + project.getName() + " deleted.");
         } else {
             System.out.println("Error: Project not found.");
@@ -168,16 +115,19 @@ public class HDBManager extends User{
             System.out.println("You are not eligible to handle this application!");
             return;
         }
-        if (newStatus == RegisterStatus.Successful) {
+        if (newStatus == RegisterStatus.SUCCESSFUL) {
             if (handlingProject.getOfficers().size() >= handlingProject.getMaxOfficers()) {
                 System.out.println("Cannot approve application: max number of officers already assigned.");
                 return;
             }
-            registrationApplication.setRegisterStatusStatus(RegisterStatus.Successful);
-            handlingProject.addOfficer(registrationApplication.getOfficer());
-            System.out.println("Application for " + registrationApplication.getOfficer().getNRIC() + " has been approved.");
-        } else if (newStatus == RegisterStatus.Unsuccessful) {
-            registrationApplication.setRegisterStatusStatus(RegisterStatus.Unsuccessful);
+            registrationApplication.setRegisterStatusStatus(RegisterStatus.SUCCESSFUL);
+            HDBOfficer approvedOfficer = registrationApplication.getOfficer();
+            approvedOfficer.setHandlingProject(this.handlingProject); // Set the handling project for the officer
+            approvedOfficer.setAssignedManager(this); // Set the assigned manager for the officer
+            handlingProject.addOfficer(approvedOfficer);
+            System.out.println("Application for " + approvedOfficer.getNRIC() + " has been approved.");
+        } else if (newStatus == RegisterStatus.UNSUCCESSFUL) {
+            registrationApplication.setRegisterStatusStatus(RegisterStatus.UNSUCCESSFUL);
             System.out.println("Application for " + registrationApplication.getOfficer().getNRIC() + " has been rejected.");
         } else {
             System.out.println("Invalid application status.");
@@ -186,30 +136,39 @@ public class HDBManager extends User{
 
 
     public void handleApplication(Application application, ApplicationStatus newStatus) {
-        if (application.getApplicationStatus() == ApplicationStatus.Successful || application.getApplicationStatus() == ApplicationStatus.Unsuccessful || application.getApplicationStatus() == ApplicationStatus.Booked){
+        if (application.getApplicationStatus() == ApplicationStatus.SUCCESSFUL || application.getApplicationStatus() == ApplicationStatus.UNSUCCESSFUL || application.getApplicationStatus() == ApplicationStatus.BOOKED){
             System.out.println("The application has already been processed.");
             return;
         }
-        if (newStatus == ApplicationStatus.Successful) {
-            application.setApplicationStatus(ApplicationStatus.Successful);
-            application.getProjectApplied().addSuccessfulApplicant(application.getApplicant());
-            System.out.println("Application for " + application.getProjectApplied().getName() + " has been approved.");
-        } else if (newStatus == ApplicationStatus.Unsuccessful) {
-            application.setApplicationStatus(ApplicationStatus.Unsuccessful);
-            System.out.println("Application for " + application.getProjectApplied().getName() + " has been rejected.");
+
+        BTOProject project = application.getProjectApplied();
+        FlatType appliedFlatType = application.getAppliedFlatType();
+
+        if (newStatus == ApplicationStatus.SUCCESSFUL) {
+            if (project.getRemainingUnits().containsKey(appliedFlatType) && project.getRemainingUnits().get(appliedFlatType) > 0) {
+                application.setApplicationStatus(ApplicationStatus.SUCCESSFUL);
+                project.decrementRemainingUnits(appliedFlatType); // Decrease remaining units
+                project.addSuccessfulApplicant(application.getApplicant());
+                System.out.println("Application for " + project.getName() + " has been approved.");
+            } else {
+                System.out.println("Cannot approve application for " + project.getName() + ". No remaining units of " + appliedFlatType + ".");
+            }
+        } else if (newStatus == ApplicationStatus.UNSUCCESSFUL) {
+            application.setApplicationStatus(ApplicationStatus.UNSUCCESSFUL);
+            System.out.println("Application for " + project.getName() + " has been rejected.");
         } else {
             System.out.println("Invalid application status.");
         }
     }
 
     public void reviewWithdrawalRequests() {
+        Scanner sc = new Scanner(System.in); // Create Scanner here
         for (BTOProject project : ProjectRegistry.getAllProjects()) {
             if (project.getManager().equals(this)) {
                 for (Application app : project.getApplications()) {
                     if (app.isWithdrawalRequested() && !app.isWithdrawalApproved()) {
                         System.out.println("Applicant: " + app.getApplicant().getName() + " requested withdrawal from project " + project.getName());
                         System.out.println("Approve? (yes/no)");
-                        Scanner sc = new Scanner(System.in);
                         String response = sc.nextLine();
                         if (response.equalsIgnoreCase("yes")) {
                             app.setWithdrawalApproved(true);
@@ -225,6 +184,7 @@ public class HDBManager extends User{
                 }
             }
         }
+        sc.close(); // Close Scanner here
     }
 
     public void viewAllEnquiries(){
@@ -238,9 +198,13 @@ public class HDBManager extends User{
     }
 
     public void viewOwnEnquiries(){
-        List<Enquiry> enquiries = this.handlingProject.getEnquiries();
-        for (Enquiry enquiry : enquiries){
-            System.out.println(enquiry.getEnquiryDetails());
+        if (this.handlingProject != null) {
+            List<Enquiry> enquiries = this.handlingProject.getEnquiries();
+            for (Enquiry enquiry : enquiries){
+                System.out.println(enquiry.getEnquiryDetails());
+            }
+        } else {
+            System.out.println("No project is currently being handled by you.");
         }
     }
 
@@ -256,5 +220,17 @@ public class HDBManager extends User{
         enquiry.setReplyText(response);
         System.out.println("Reply sent to applicant: " + response);
     }
-}
 
+    public void setHandlingProject(BTOProject project) {
+        if (this.handlingProject == null){
+            System.out.println("You have an already handling project!");
+            return;
+        }
+        if (projectsCreated.contains(project) || ProjectRegistry.getAllProjects().contains(project)) {
+            this.handlingProject = project;
+            System.out.println("Now handling project: " + project.getName());
+        } else {
+            System.out.println("Error: Project not found or not associated with you.");
+        }
+    }
+}
