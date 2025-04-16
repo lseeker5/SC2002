@@ -84,7 +84,6 @@ public class Applicant extends User {
         }
         application = new Application(this, project, ApplicationStatus.PENDING, flatType);
         project.getApplications().add(application);
-        project.decrementRemainingUnits(flatType);
         System.out.println("Successfully applied for project: " + project.getName() + " - " + flatType);
     }
 
@@ -193,7 +192,11 @@ public class Applicant extends User {
         }
     }
 
-    // Main UI methods
+
+
+
+
+    // UI Handling Functions
 
     public void handleViewAvailableProjects(){
         viewAvailableProjects();
@@ -208,6 +211,11 @@ public class Applicant extends User {
     }
     public void handleApplyForProject(Scanner scanner) {
         System.out.println("\n--- Apply for Project ---");
+        List<BTOProject> availableProjects = getAvailableProjects();
+        if (availableProjects.isEmpty()) {
+            System.out.println("Sorry, there is no available project for you.");
+            return;
+        }
         viewAvailableProjects();
         System.out.print("Enter the name of the project to apply: ");
         String projectName = scanner.nextLine();

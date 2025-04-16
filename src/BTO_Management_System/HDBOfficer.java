@@ -200,7 +200,7 @@ public class HDBOfficer extends Applicant {
 
 
 
-    // --- UI Handling Functions for Officer ---
+    // UI Handling Functions
 
     public void handleViewHandlingProjectDetails() {
         viewHandlingProjectDetails();
@@ -258,7 +258,7 @@ public class HDBOfficer extends Applicant {
             }
         } else {
             System.out.println("Invalid input for enquiry ID.");
-            scanner.nextLine(); // Consume invalid input
+            scanner.nextLine();
         }
     }
 
@@ -281,7 +281,6 @@ public class HDBOfficer extends Applicant {
         for (int i = 0; i < successfulApplications.size(); i++) {
             System.out.println((i + 1) + ". Application ID: " + successfulApplications.get(i).getApplicationId() + ", Applicant NRIC: " + successfulApplications.get(i).getApplicant().getNRIC());
         }
-
         System.out.print("Enter the Application ID to book a flat for: ");
         if (scanner.hasNextInt()) {
             int applicationIdToBook = scanner.nextInt();
@@ -324,17 +323,14 @@ public class HDBOfficer extends Applicant {
         List<Application> bookedApplications = handlingProject.getApplications().stream()
                 .filter(app -> app.getApplicationStatus() == ApplicationStatus.BOOKED)
                 .collect(Collectors.toList());
-
         if (bookedApplications.isEmpty()) {
             System.out.println("No booked applications for the handled project to generate receipts for.");
             return;
         }
-
         System.out.println("Booked Applications for " + handlingProject.getName() + ":");
         for (int i = 0; i < bookedApplications.size(); i++) {
             System.out.println((i + 1) + ". Application ID: " + bookedApplications.get(i).getApplicationId() + ", Applicant NRIC: " + bookedApplications.get(i).getApplicant().getNRIC() + ", Flat Type: " + bookedApplications.get(i).getAppliedFlatType());
         }
-
         System.out.print("Enter the Application ID to generate a receipt for: ");
         if (scanner.hasNextInt()) {
             int applicationIdToGenerate = scanner.nextInt();
@@ -347,7 +343,6 @@ public class HDBOfficer extends Applicant {
                     break;
                 }
             }
-
             if (selectedApplication != null) {
                 generateReceipt(selectedApplication);
             } else {
@@ -355,6 +350,32 @@ public class HDBOfficer extends Applicant {
             }
         } else {
             System.out.println("Invalid input for Application ID.");
+            scanner.nextLine();
+        }
+    }
+
+    public void handleRegister(Scanner scanner){
+        if (assignedToProject()){
+            System.out.println("You have already been assigned to a project!");
+            return;
+        }
+        System.out.println("Enter the project name you prefer to register: ");
+        if (scanner.hasNext()){
+            String projectName = scanner.nextLine();
+            scanner.nextLine();
+            BTOProject targetProject = ProjectRegistry.findProject(projectName);
+            if (targetProject == null){
+                System.out.println("Error: Invalid project name.");
+                return;
+            }
+            if (!isEligibleToRegister(targetProject)){
+                System.out.println("You are not eligible to apply for this project.");
+                return;
+            }
+            register(targetProject);
+            System.out.println("You have successfully registered for project: " + projectName);
+        } else {
+            System.out.println("Invalid input for project name");
             scanner.nextLine();
         }
     }

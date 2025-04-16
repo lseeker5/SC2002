@@ -1,11 +1,14 @@
 package BTO_Management_System;
 
 public class RegistrationApplication {
+    private static int counter = 1;
+    private int registerId;
     private final HDBOfficer officer;
     private BTOProject projectApplied;
     private RegisterStatus registerStatusStatus;
 
     public RegistrationApplication(HDBOfficer officer, BTOProject projectApplied, RegisterStatus applicationStatus){
+        this.registerId = counter++;
         this.officer = officer;
         this.projectApplied = projectApplied;
         this.registerStatusStatus = applicationStatus;
@@ -21,6 +24,10 @@ public class RegistrationApplication {
         }
         RegistrationApplication temp = (RegistrationApplication) another;
         return this.officer.equals(temp.officer);
+    }
+
+    public int getRegisterId() {
+        return registerId;
     }
 
     public HDBOfficer getOfficer() {

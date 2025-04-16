@@ -24,6 +24,14 @@ public class Enquiry {
         return project;
     }
 
+    public Applicant getApplicant() {
+        return applicant;
+    }
+
+    public String getEnquiryText() {
+        return enquiryText;
+    }
+
     // Methods
     public String getEnquiryDetails() {
         return "Enquiry ID: " + enquiryId + ", Applicant: " + applicant + ", Project: " + project + ", Enquiry: " + enquiryText;
