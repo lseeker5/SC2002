@@ -7,11 +7,13 @@ public class HDBManager extends User {
     private List<BTOProject> projectsCreated;
     private static final int MAX_OFFICERS_PROJECT = 10;
     private BTOProject handlingProject;
+    private boolean hasCreatedFirstProject;
 
     // Constructor
     public HDBManager(String name, String nric, int age, MaritalStatus maritalStatus) {
         super(name, nric, age, maritalStatus);
-        this.projectsCreated = new ArrayList<>(); // Initialize the list
+        this.projectsCreated = new ArrayList<>();
+        this.hasCreatedFirstProject = false;
     }
 
     @Override
@@ -47,6 +49,25 @@ public class HDBManager extends User {
         this.projectsCreated.add(newProject);
         ProjectRegistry.addProject(newProject);
         System.out.println("New project created: " + name);
+        if (!hasCreatedFirstProject) {
+            setHandlingProject(newProject);
+            hasCreatedFirstProject = true;
+            System.out.println("This is your first created project. It has been set as your handling project: " + name);
+        }
+    }
+
+    public void deleteProject(BTOProject project) {
+        if (projectsCreated.contains(project)) {
+            projectsCreated.remove(project);
+            ProjectRegistry.removeProject(project); // Add this line
+            System.out.println("Project " + project.getName() + " deleted.");
+            if (handlingProject != null && handlingProject.equals(project)) {
+                handlingProject = null; // Clear handling project if the deleted one was being handled
+                System.out.println("The deleted project was your handling project. No project is currently being handled.");
+            }
+        } else {
+            System.out.println("Error: Project not found.");
+        }
     }
 
     private Date parseDate(String s) {
@@ -56,15 +77,6 @@ public class HDBManager extends User {
         return new Date(day, month, year);
     }
 
-    public void deleteProject(BTOProject project) {
-        if (projectsCreated.contains(project)) {
-            projectsCreated.remove(project);
-            ProjectRegistry.removeProject(project); // Add this line
-            System.out.println("Project " + project.getName() + " deleted.");
-        } else {
-            System.out.println("Error: Project not found.");
-        }
-    }
 
     public void viewOwnCreatedProjects() {
         List<BTOProject> createdProjects = this.getProjectsCreated();
@@ -370,6 +382,7 @@ public class HDBManager extends User {
         }
 
         createProject(name, neighborhood, remainingUnits, openDate, closeDate, maxOfficers);
+        // The createProject method now handles setting the first project as handling project.
     }
 
     public void handleDeleteProject(Scanner scanner) {
@@ -380,7 +393,7 @@ public class HDBManager extends User {
         }
         System.out.println("Your Created Projects:");
         for (BTOProject project : projectsCreated) {
-            System.out.println("- " + project.getName());
+            System.out.println("- " + project.getName() + (handlingProject != null && handlingProject.equals(project) ? " (Currently Handling)" : ""));
         }
         System.out.print("Enter the name of the project to delete: ");
         String projectNameToDelete = scanner.nextLine().trim();
@@ -596,20 +609,18 @@ public class HDBManager extends User {
 
         List<Enquiry> allEnquiries = new ArrayList<>();
         for (BTOProject project : allProjects) {
-            if (project.getManager() != null && project.getManager().equals(this)) {
-                List<Enquiry> enquiries = project.getEnquiries();
-                if (enquiries != null) {
-                    allEnquiries.addAll(enquiries);
-                }
+            List<Enquiry> enquiries = project.getEnquiries();
+            if (enquiries != null) {
+                allEnquiries.addAll(enquiries);
             }
         }
 
         if (allEnquiries.isEmpty()) {
-            System.out.println("No enquiries found for your managed projects.");
+            System.out.println("No enquiries found across all projects.");
             return;
         }
 
-        System.out.println("Enquiries across your managed projects:");
+        System.out.println("All Enquiries:");
         for (Enquiry enquiry : allEnquiries) {
             System.out.println("- Enquiry ID: " + enquiry.getEnquiryId() + ", Project: " + enquiry.getProject().getName() + ", From: " + enquiry.getApplicant().getName());
         }
@@ -705,6 +716,113 @@ public class HDBManager extends User {
         } else {
             System.out.println("Invalid input for enquiry ID.");
             scanner.nextLine(); // Consume invalid input
+        }
+    }
+
+    public void handleViewAllProjects(Scanner scanner) {
+        System.out.println("\n--- View All Projects ---");
+        List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
+        UserSettings userSettings = getUserSettings();
+
+        List<BTOProject> filteredAndSortedProjects = allProjects;
+
+        filteredAndSortedProjects = ProjectRegistry.filterProjects(
+                filteredAndSortedProjects,
+                userSettings.getProjectFilterLocation(),
+                userSettings.getProjectFilterFlatTypes()
+        );
+
+        filteredAndSortedProjects = ProjectRegistry.sortProjects(
+                filteredAndSortedProjects,
+                userSettings.getProjectSortOrder()
+        );
+
+        if (filteredAndSortedProjects.isEmpty()) {
+            System.out.println("No projects found based on your filters.");
+        } else {
+            System.out.println("All BTO Projects:");
+            for (BTOProject project : filteredAndSortedProjects) {
+                System.out.println(project.getDetails());
+            }
+        }
+
+        boolean stayingInMenu = true;
+        while (stayingInMenu) {
+            System.out.println("\nOptions:");
+            System.out.println("1. Filter by Location (Current: " + userSettings.getProjectFilterLocation() + ")");
+            System.out.println("2. Filter by Flat Type (Current: " + userSettings.getProjectFilterFlatTypes() + ")");
+            System.out.println("3. Sort By (Current: " + userSettings.getProjectSortOrder() + ")");
+            System.out.println("0. Back to Main Menu");
+            System.out.print("Enter your choice: ");
+
+            if (scanner.hasNextInt()) {
+                int choice = scanner.nextInt();
+                scanner.nextLine(); // Consume newline
+
+                switch (choice) {
+                    case 1:
+                        System.out.println("Enter locations to filter (comma-separated, e.g., Woodlands, Tampines, or leave empty for all):");
+                        String locationsInput = scanner.nextLine().trim();
+                        userSettings.setProjectFilterLocation(
+                                locationsInput.isEmpty() ? new ArrayList<>() : Arrays.asList(locationsInput.split(","))
+                        );
+                        break;
+                    case 2:
+                        System.out.println("Enter flat types to filter (comma-separated, e.g., TWOROOM, THREEROOM, or leave empty for all):");
+                        String flatTypesInput = scanner.nextLine().trim().toUpperCase();
+                        List<FlatType> selectedFlatTypes = new ArrayList<>();
+                        if (!flatTypesInput.isEmpty()) {
+                            for (String type : flatTypesInput.split(",")) {
+                                try {
+                                    selectedFlatTypes.add(FlatType.valueOf(type.trim()));
+                                } catch (IllegalArgumentException e) {
+                                    System.out.println("Invalid flat type: " + type);
+                                }
+                            }
+                        }
+                        userSettings.setProjectFilterFlatTypes(selectedFlatTypes);
+                        break;
+                    case 3:
+                        System.out.println("Sort by: (ALPHABETICAL, LOCATION, FLAT_TYPE, or leave empty for default)");
+                        String sortByInput = scanner.nextLine().trim().toUpperCase();
+                        if (sortByInput.isEmpty() || sortByInput.equals("ALPHABETICAL") || sortByInput.equals("LOCATION") || sortByInput.equals("FLAT_TYPE")) {
+                            userSettings.setProjectSortOrder(sortByInput.isEmpty() ? "ALPHABETICAL" : sortByInput);
+                        } else {
+                            System.out.println("Invalid sorting option.");
+                        }
+                        break;
+                    case 0:
+                        stayingInMenu = false;
+                        break;
+                    default:
+                        System.out.println("Invalid choice.");
+                }
+
+                // Re-display the updated list
+                List<BTOProject> updatedFilteredAndSortedProjects = ProjectRegistry.getAllProjects();
+                updatedFilteredAndSortedProjects = ProjectRegistry.filterProjects(
+                        updatedFilteredAndSortedProjects,
+                        userSettings.getProjectFilterLocation(),
+                        userSettings.getProjectFilterFlatTypes()
+                );
+                updatedFilteredAndSortedProjects = ProjectRegistry.sortProjects(
+                        updatedFilteredAndSortedProjects,
+                        userSettings.getProjectSortOrder()
+                );
+
+                System.out.println("\n--- Updated All BTO Projects ---");
+                if (updatedFilteredAndSortedProjects.isEmpty()) {
+                    System.out.println("No projects found based on your filters.");
+                } else {
+                    for (BTOProject project : updatedFilteredAndSortedProjects) {
+                        System.out.println(project.getDetails());
+                    }
+                }
+
+            } else {
+                System.out.println("Invalid input.");
+                scanner.nextLine(); // Consume invalid input
+            }
         }
     }
 }

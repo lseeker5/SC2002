@@ -151,7 +151,7 @@ public class BTOManagementApp {
                 scanner.nextLine();
                 switch (choice) {
                     case 1:
-                        applicant.handleViewAvailableProjects();
+                        applicant.handleViewAvailableProjects(scanner);
                         break;
                     case 2:
                         applicant.handleApplyForProject(scanner);
@@ -315,7 +315,7 @@ public class BTOManagementApp {
                         manager.handleChangeHandlingProjectVisibility(scanner);
                         break;
                     case 6:
-                        manager.viewAllProjects();
+                        manager.handleViewAllProjects(scanner);
                         break;
                     case 7:
                         manager.handleViewAllOfficerApplications();

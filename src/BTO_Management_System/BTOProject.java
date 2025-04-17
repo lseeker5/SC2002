@@ -21,12 +21,13 @@ public class BTOProject {
                       Date applicationOpenDate, Date applicationCloseDate, HDBManager manager, int maxOfficers) {
         this.name = name;
         this.neighborhood = neighborhood;
-        this.remainingUnits = remainingUnits; // Initialize remaining units using a map
+        this.remainingUnits = remainingUnits;
         this.visibility = true;
         this.applicationOpenDate = applicationOpenDate;
         this.applicationCloseDate = applicationCloseDate;
         this.manager = manager;
         this.officers = new ArrayList<>();
+        this.officerApplications = new ArrayList<>();
         this.applications = new ArrayList<>();
         this.enquiries = new ArrayList<>();
         this.successfulApplicants = new ArrayList<>();

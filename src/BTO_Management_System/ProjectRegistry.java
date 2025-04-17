@@ -1,5 +1,7 @@
 package BTO_Management_System;
+
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ProjectRegistry {
     private static List<BTOProject> allProjects = new ArrayList<>();
@@ -16,34 +18,34 @@ public class ProjectRegistry {
         allProjects.remove(project);
     }
 
-    public static BTOProject findProject(String name){
-        for (BTOProject project : allProjects){
-            if (project.getName().equals(name)){
+    public static BTOProject findProject(String name) {
+        for (BTOProject project : allProjects) {
+            if (project.getName().equalsIgnoreCase(name)) {
                 return project;
             }
         }
         return null;
     }
 
-    public static List<BTOProject> getVisibleProjects() {
-        return allProjects.stream().filter(BTOProject::isVisible).toList();
+    // --- Filtering Methods (Static) ---
+
+    public static List<BTOProject> filterProjects(List<BTOProject> projects, List<String> locations, List<FlatType> flatTypes) {
+        return projects.stream()
+                .filter(p -> locations.isEmpty() || locations.contains(p.getNeighborhood()))
+                .filter(p -> flatTypes.isEmpty() || p.getFlatTypes().stream().anyMatch(flatTypes::contains))
+                .collect(Collectors.toList());
     }
 
-    public static List<BTOProject> getProjectsByNeighborhood(String neighborhood) {
-        return allProjects.stream().filter(p -> p.getNeighborhood().equals(neighborhood)).toList();
-    }
+    // --- Sorting Methods (Static) ---
 
-    public static List<BTOProject> getProjectsByFlatType(FlatType flatType) {
-        return allProjects.stream().filter(p -> p.getFlatTypes().contains(flatType)).toList();
-    }
-
-    public static List<BTOProject> getFilteredProjects(String locationFilter, FlatType flatTypeFilter, boolean onlyVisible) {
-        return allProjects.stream()
-                .filter(p -> !onlyVisible || p.isVisible())
-                .filter(p -> locationFilter == null || locationFilter.isEmpty() || p.getNeighborhood().equals(locationFilter))
-                .filter(p -> flatTypeFilter == null || p.getFlatTypes().contains(flatTypeFilter))
-                .sorted(Comparator.comparing(BTOProject::getName)) // Default sort by name
-                .toList();
+    public static List<BTOProject> sortProjects(List<BTOProject> projects, String sortBy) {
+        if (sortBy == null || sortBy.equalsIgnoreCase("ALPHABETICAL")) {
+            projects.sort(Comparator.comparing(BTOProject::getName));
+        } else if (sortBy.equalsIgnoreCase("LOCATION")) {
+            projects.sort(Comparator.comparing(BTOProject::getNeighborhood));
+        } else if (sortBy.equalsIgnoreCase("FLAT_TYPE")) {
+            projects.sort(Comparator.comparing(p -> p.getFlatTypes().isEmpty() ? "" : p.getFlatTypes().get(0).toString())); // Sort by the first flat type
+        }
+        return projects;
     }
 }
-

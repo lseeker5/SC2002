@@ -1,6 +1,7 @@
 package BTO_Management_System;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Applicant extends User {
     protected Application application;
@@ -102,7 +103,7 @@ public class Applicant extends User {
             return;
         }
         ApplicationStatus currentStatus = this.application.getApplicationStatus();
-        System.out.println("Your current application status for project " + this.application.getProjectApplied() + " is:" + currentStatus);
+        System.out.println("Your current application status for project " + this.application.getProjectApplied().getName() + " is:" + currentStatus);
     }
 
     private void requestWithdrawApplication() {
@@ -192,14 +193,134 @@ public class Applicant extends User {
         }
     }
 
+    private List<BTOProject> filterProjects(List<BTOProject> projects, List<String> locations, List<FlatType> flatTypes) {
+        return projects.stream()
+                .filter(p -> locations.isEmpty() || locations.contains(p.getNeighborhood()))
+                .filter(p -> flatTypes.isEmpty() || p.getFlatTypes().stream().anyMatch(flatTypes::contains))
+                .collect(Collectors.toList());
+    }
+
+    private List<BTOProject> sortProjects(List<BTOProject> projects, String sortBy) {
+        if (sortBy == null || sortBy.equalsIgnoreCase("ALPHABETICAL")) {
+            projects.sort(Comparator.comparing(BTOProject::getName));
+        } else if (sortBy.equalsIgnoreCase("LOCATION")) {
+            projects.sort(Comparator.comparing(BTOProject::getNeighborhood));
+        } else if (sortBy.equalsIgnoreCase("FLAT_TYPE")) {
+            projects.sort(Comparator.comparing(p -> p.getFlatTypes().isEmpty() ? "" : p.getFlatTypes().get(0).toString())); // Sort by the first flat type
+        }
+        return projects;
+    }
+
 
 
 
 
     // UI Handling Functions
 
-    public void handleViewAvailableProjects(){
-        viewAvailableProjects();
+    public void handleViewAvailableProjects(Scanner scanner) {
+        System.out.println("\n--- View Available Projects ---");
+        List<BTOProject> allAvailableProjects = getAvailableProjects();
+        UserSettings userSettings = getUserSettings();
+
+        List<BTOProject> filteredAndSortedProjects = allAvailableProjects;
+
+        filteredAndSortedProjects = ProjectRegistry.filterProjects(
+                filteredAndSortedProjects,
+                userSettings.getProjectFilterLocation(),
+                userSettings.getProjectFilterFlatTypes()
+        );
+
+        filteredAndSortedProjects = ProjectRegistry.sortProjects(
+                filteredAndSortedProjects,
+                userSettings.getProjectSortOrder()
+        );
+
+        if (filteredAndSortedProjects.isEmpty()) {
+            System.out.println("No available projects based on your eligibility and filters.");
+        } else {
+            System.out.println("Available projects:");
+            for (BTOProject project : filteredAndSortedProjects) {
+                System.out.println(project.getDetails());
+            }
+        }
+
+        boolean stayingInMenu = true;
+        while (stayingInMenu) {
+            System.out.println("\nOptions:");
+            System.out.println("1. Filter by Location (Current: " + userSettings.getProjectFilterLocation() + ")");
+            System.out.println("2. Filter by Flat Type (Current: " + userSettings.getProjectFilterFlatTypes() + ")");
+            System.out.println("3. Sort By (Current: " + userSettings.getProjectSortOrder() + ")");
+            System.out.println("0. Back to Main Menu");
+            System.out.print("Enter your choice: ");
+
+            if (scanner.hasNextInt()) {
+                int choice = scanner.nextInt();
+                scanner.nextLine(); // Consume newline
+
+                switch (choice) {
+                    case 1:
+                        System.out.println("Enter locations to filter (comma-separated, e.g., Woodlands, Tampines, or leave empty for all):");
+                        String locationsInput = scanner.nextLine().trim();
+                        userSettings.setProjectFilterLocation(
+                                locationsInput.isEmpty() ? new ArrayList<>() : Arrays.asList(locationsInput.split(","))
+                        );
+                        break;
+                    case 2:
+                        System.out.println("Enter flat types to filter (comma-separated, e.g., TWOROOM, THREEROOM, or leave empty for all):");
+                        String flatTypesInput = scanner.nextLine().trim().toUpperCase();
+                        List<FlatType> selectedFlatTypes = new ArrayList<>();
+                        if (!flatTypesInput.isEmpty()) {
+                            for (String type : flatTypesInput.split(",")) {
+                                try {
+                                    selectedFlatTypes.add(FlatType.valueOf(type.trim()));
+                                } catch (IllegalArgumentException e) {
+                                    System.out.println("Invalid flat type: " + type);
+                                }
+                            }
+                        }
+                        userSettings.setProjectFilterFlatTypes(selectedFlatTypes);
+                        break;
+                    case 3:
+                        System.out.println("Sort by: (ALPHABETICAL, LOCATION, FLAT_TYPE, or leave empty for default)");
+                        String sortByInput = scanner.nextLine().trim().toUpperCase();
+                        if (sortByInput.isEmpty() || sortByInput.equals("ALPHABETICAL") || sortByInput.equals("LOCATION") || sortByInput.equals("FLAT_TYPE")) {
+                            userSettings.setProjectSortOrder(sortByInput.isEmpty() ? "ALPHABETICAL" : sortByInput);
+                        } else {
+                            System.out.println("Invalid sorting option.");
+                        }
+                        break;
+                    case 0:
+                        stayingInMenu = false;
+                        break;
+                    default:
+                        System.out.println("Invalid choice.");
+                }
+
+                List<BTOProject> updatedAvailableProjects = getAvailableProjects();
+                List<BTOProject> updatedFilteredAndSortedProjects = ProjectRegistry.filterProjects(
+                        updatedAvailableProjects,
+                        userSettings.getProjectFilterLocation(),
+                        userSettings.getProjectFilterFlatTypes()
+                );
+                updatedFilteredAndSortedProjects = ProjectRegistry.sortProjects(
+                        updatedFilteredAndSortedProjects,
+                        userSettings.getProjectSortOrder()
+                );
+
+                System.out.println("\n--- Updated Available Project List ---");
+                if (updatedFilteredAndSortedProjects.isEmpty()) {
+                    System.out.println("No available projects based on your eligibility and filters.");
+                } else {
+                    for (BTOProject project : updatedFilteredAndSortedProjects) {
+                        System.out.println(project.getDetails());
+                    }
+                }
+
+            } else {
+                System.out.println("Invalid input.");
+                scanner.nextLine();
+            }
+        }
     }
 
     public void handleViewApplicationStatus(){

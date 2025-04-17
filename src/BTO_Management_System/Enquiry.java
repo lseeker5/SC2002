@@ -34,7 +34,7 @@ public class Enquiry {
 
     // Methods
     public String getEnquiryDetails() {
-        return "Enquiry ID: " + enquiryId + ", Applicant: " + applicant + ", Project: " + project + ", Enquiry: " + enquiryText;
+        return "Enquiry ID: " + enquiryId + ", Applicant: " + applicant.getName() + ", Project: " + project.getName() + ", Enquiry: " + enquiryText;
     }
 
     public void updateEnquiry(String newText) {

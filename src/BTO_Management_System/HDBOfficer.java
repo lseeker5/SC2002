@@ -67,7 +67,7 @@ public class HDBOfficer extends Applicant {
         RegistrationApplication newApplication = new RegistrationApplication(this, project, RegisterStatus.Pending);
         this.registrationApplication = newApplication;
         project.addRegisterApplication(newApplication);
-        System.out.println("You have successfully applied for handling project" + project.getName() + ", waiting for approval from its manager.");
+        System.out.println("You have successfully registered to handle project: " + project.getName() + ", waiting for approval from its manager.");
     }
 
     private RegisterStatus getRegistrationStatus() {
@@ -359,22 +359,21 @@ public class HDBOfficer extends Applicant {
             System.out.println("You have already been assigned to a project!");
             return;
         }
-        System.out.println("Enter the project name you prefer to register: ");
+        System.out.println("Enter the project name you prefer to register for: ");
         if (scanner.hasNext()){
             String projectName = scanner.nextLine();
-            scanner.nextLine();
             BTOProject targetProject = ProjectRegistry.findProject(projectName);
             if (targetProject == null){
                 System.out.println("Error: Invalid project name.");
                 return;
             }
             if (!isEligibleToRegister(targetProject)){
-                System.out.println("You are not eligible to apply for this project.");
+                System.out.println("You are not eligible to register for this project.");
                 return;
             }
             register(targetProject);
             System.out.println("You have successfully registered for project: " + projectName);
-        } else {
+        }else {
             System.out.println("Invalid input for project name");
             scanner.nextLine();
         }
