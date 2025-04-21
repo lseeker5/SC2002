@@ -14,7 +14,7 @@ public class BTOProject {
     private List<RegistrationApplication> officerApplications;
     private List<Application> applications;
     private List<Enquiry> enquiries;
-    private List<Applicant> successfulApplicants;
+    private List<Application> successfulApplications;
     private int maxOfficers;
 
     public BTOProject(String name, String neighborhood, Map<FlatType, Integer> remainingUnits,
@@ -30,7 +30,7 @@ public class BTOProject {
         this.officerApplications = new ArrayList<>();
         this.applications = new ArrayList<>();
         this.enquiries = new ArrayList<>();
-        this.successfulApplicants = new ArrayList<>();
+        this.successfulApplications = new ArrayList<>();
         if (maxOfficers > 10) {
             throw new IllegalArgumentException("Max officers cannot exceed 10.");
         }
@@ -136,8 +136,8 @@ public class BTOProject {
         return enquiries;
     }
 
-    public List<Applicant> getSuccessfulApplicants() {
-        return successfulApplicants;
+    public List<Application> getSuccessfulApplications() {
+        return successfulApplications;
     }
 
     public List<FlatType> getFlatTypes(){
@@ -165,8 +165,8 @@ public class BTOProject {
         this.officerApplications.add(registrationApplication);
     }
 
-    public void addSuccessfulApplicant(Applicant applicant) {
-        this.successfulApplicants.add(applicant);
+    public void addSuccessfulApplication(Application application) {
+        this.successfulApplications.add(application);
     }
 
     public void addEnquiry(Enquiry enq) {
@@ -220,7 +220,7 @@ public class BTOProject {
             if (app.getApplicant().equals(applicant)) {
                 app.setApplicationStatus(newStatus);
                 if (newStatus == ApplicationStatus.SUCCESSFUL) {
-                    this.successfulApplicants.add(applicant);
+                    this.successfulApplications.add(app);
                 }
                 return;
             }

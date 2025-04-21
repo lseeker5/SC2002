@@ -9,7 +9,6 @@ public class HDBManager extends User {
     private BTOProject handlingProject;
     private boolean hasCreatedFirstProject;
 
-    // Constructor
     public HDBManager(String name, String nric, int age, MaritalStatus maritalStatus) {
         super(name, nric, age, maritalStatus);
         this.projectsCreated = new ArrayList<>();
@@ -37,7 +36,6 @@ public class HDBManager extends User {
         return this.nric.equals(temp.nric);
     }
 
-
     public void createProject(String name, String neighborhood,
                               Map<FlatType, Integer> remainingUnits, Date applicationOpenDate,
                               Date applicationCloseDate, int maxOfficers) {
@@ -45,10 +43,15 @@ public class HDBManager extends User {
             System.out.println("Maximum number of officers for a project cannot exceed 10.");
             return;
         }
+        if (remainingUnits == null || remainingUnits.isEmpty()) {
+            System.out.println("Please specify remaining units for at least one flat type.");
+            return;
+        }
+
         BTOProject newProject = new BTOProject(name, neighborhood, remainingUnits, applicationOpenDate, applicationCloseDate, this, maxOfficers);
         this.projectsCreated.add(newProject);
         ProjectRegistry.addProject(newProject);
-        System.out.println("New project created: " + name);
+        System.out.println("New project created: " + name + " (Allowing: " + remainingUnits.keySet() + ")");
         if (!hasCreatedFirstProject) {
             setHandlingProject(newProject);
             hasCreatedFirstProject = true;
@@ -91,10 +94,6 @@ public class HDBManager extends User {
     }
 
     public void changeHandlingProjectVisibility(boolean visibility) {
-        if (this.handlingProject == null) {
-            System.out.println("You have not been assigned to a project yet.");
-            return;
-        }
         this.handlingProject.setVisibility(visibility);
         System.out.println("Project " + this.handlingProject.getName() + " visibility set to " + (visibility ? "ON" : "OFF"));
     }
@@ -175,8 +174,7 @@ public class HDBManager extends User {
         if (newStatus == ApplicationStatus.SUCCESSFUL) {
             if (project.getRemainingUnits().containsKey(appliedFlatType) && project.getRemainingUnits().get(appliedFlatType) > 0) {
                 application.setApplicationStatus(ApplicationStatus.SUCCESSFUL);
-                project.decrementRemainingUnits(appliedFlatType); // Decrease remaining units
-                project.addSuccessfulApplicant(application.getApplicant());
+                project.updateApplicationStatus(application.getApplicant(), ApplicationStatus.SUCCESSFUL); // Use the project's method
                 System.out.println("Application (ID: " + application.getApplicationId() + ") for " + project.getName() + " has been approved.");
             } else {
                 System.out.println("Cannot approve application (ID: " + application.getApplicationId() + ") for " + project.getName() + ". No remaining units of " + appliedFlatType + ".");
@@ -298,7 +296,7 @@ public class HDBManager extends User {
         }
     }
 
-    public void replyEnquiry(Enquiry enquiry, String response) {
+    private void replyEnquiry(Enquiry enquiry, String response) {
         if (this.handlingProject == null) {
             System.out.println("You are not assigned to any project.");
             return;
@@ -311,7 +309,7 @@ public class HDBManager extends User {
         System.out.println("Reply sent to applicant (Enquiry ID: " + enquiry.getEnquiryId() + "): " + response);
     }
 
-    public void setHandlingProject(BTOProject project) {
+    private void setHandlingProject(BTOProject project) {
         if (this.handlingProject != null) {
             System.out.println("You are already handling project: " + this.handlingProject.getName());
             return;
@@ -324,6 +322,152 @@ public class HDBManager extends User {
         }
     }
 
+    private void generateBookingReport(List<Application> applications, String maritalFilter, String flatTypeFilter) {
+        System.out.println("\n--- Booking Report for Project: " + handlingProject.getName() + " ---");
+        if (maritalFilter != null) {
+            System.out.println("Filter: " + maritalFilter);
+        }
+        if (flatTypeFilter != null) {
+            System.out.println("Filter: " + flatTypeFilter);
+        }
+
+        if (applications.isEmpty()) {
+            System.out.println("No booked applicants found based on the applied filters (if any).");
+            return;
+        }
+
+        System.out.println(String.format("%-15s %-10s %-12s %-10s %-15s", "Applicant Name", "Flat Type", "Project", "Age", "Marital Status"));
+        System.out.println("------------------------------------------------------------------");
+
+        for (Application app : applications) {
+            Applicant applicant = app.getApplicant();
+            System.out.println(String.format("%-15s %-10s %-12s %-10d %-15s",
+                    applicant.getName(),
+                    app.getAppliedFlatType(),
+                    handlingProject.getName(),
+                    applicant.getAge(),
+                    applicant.getMaritalStatus()));
+        }
+        System.out.println("------------------------------------------------------------------");
+        System.out.println("Total Booked Applicants: " + applications.size());
+    }
+
+    private void editProjectDetails(Scanner scanner, BTOProject project) {
+        int choice;
+        do {
+            System.out.println("\n--- Editing Project: " + project.getName() + " ---");
+            System.out.println("1. Edit Neighborhood");
+            System.out.println("2. Edit Remaining Units");
+            System.out.println("3. Edit Application Open Date");
+            System.out.println("4. Edit Application Close Date");
+            System.out.println("5. Edit Maximum Officers");
+            System.out.println("0. Back to Manager Menu");
+            System.out.print("Enter your choice: ");
+            if (scanner.hasNextInt()) {
+                choice = scanner.nextInt();
+                scanner.nextLine();
+                switch (choice) {
+                    case 1:
+                        System.out.print("Enter new neighborhood: ");
+                        project.setNeighborhood(scanner.nextLine());
+                        System.out.println("Neighborhood updated.");
+                        break;
+                    case 2:
+                        editRemainingUnits(scanner, project);
+                        break;
+                    case 3:
+                        System.out.print("Enter new application open date (YYYY-MM-DD): ");
+                        String openDateStr = scanner.nextLine();
+                        Date openDate = parseDate(openDateStr);
+                        if (openDate != null) project.setApplicationOpenDate(openDate);
+                        break;
+                    case 4:
+                        System.out.print("Enter new application close date (YYYY-MM-DD): ");
+                        String closeDateStr = scanner.nextLine();
+                        Date closeDate = parseDate(closeDateStr);
+                        if (closeDate != null) project.setApplicationCloseDate(closeDate);
+                        break;
+                    case 5:
+                        System.out.print("Enter new maximum number of officers (up to " + MAX_OFFICERS_PROJECT + "): ");
+                        int maxOfficers;
+                        if (scanner.hasNextInt()) {
+                            maxOfficers = scanner.nextInt();
+                            scanner.nextLine();
+                            if (maxOfficers > 0 && maxOfficers <= MAX_OFFICERS_PROJECT) {
+                                project.setMaxOfficers(maxOfficers);
+                                System.out.println("Maximum officers updated.");
+                            } else {
+                                System.out.println("Invalid number of officers.");
+                            }
+                        } else {
+                            System.out.println("Invalid input.");
+                            scanner.nextLine();
+                        }
+                        break;
+                    case 0:
+                        System.out.println("Returning to Manager Menu.");
+                        return;
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                }
+            } else {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.nextLine();
+            }
+        } while (true);
+    }
+
+    private void editRemainingUnits(Scanner scanner, BTOProject project) {
+        int choice;
+        do {
+            System.out.println("\n--- Editing Remaining Units for Project: " + project.getName() + " ---");
+            System.out.println("Current Remaining Units:");
+            for (Map.Entry<FlatType, Integer> entry : project.getRemainingUnits().entrySet()) {
+                System.out.println("- " + entry.getKey() + ": " + entry.getValue());
+            }
+            System.out.println("1. Edit 2-Room Units");
+            System.out.println("2. Edit 3-Room Units");
+            System.out.println("0. Back to Edit Project Menu");
+            System.out.print("Enter your choice: ");
+            if (scanner.hasNextInt()) {
+                choice = scanner.nextInt();
+                scanner.nextLine();
+                switch (choice) {
+                    case 1:
+                        System.out.print("Enter new remaining units for 2-Room flats: ");
+                        if (scanner.hasNextInt()) {
+                            project.getRemainingUnits().put(FlatType.TWOROOM, scanner.nextInt());
+                            scanner.nextLine();
+                            System.out.println("2-Room units updated.");
+                        } else {
+                            System.out.println("Invalid input.");
+                            scanner.nextLine();
+                        }
+                        break;
+                    case 2:
+                        System.out.print("Enter new remaining units for 3-Room flats: ");
+                        if (scanner.hasNextInt()) {
+                            project.getRemainingUnits().put(FlatType.THREEROOM, scanner.nextInt());
+                            scanner.nextLine();
+                            System.out.println("3-Room units updated.");
+                        } else {
+                            System.out.println("Invalid input.");
+                            scanner.nextLine();
+                        }
+                        break;
+                    case 0:
+                        System.out.println("Returning to Edit Project Menu.");
+                        return;
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                }
+            } else {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.nextLine(); // Consume invalid input
+            }
+        } while (true);
+    }
+
 
 
 
@@ -331,7 +475,7 @@ public class HDBManager extends User {
 
     // UI Handling Functions
 
-    public void handleCreateProject(Scanner scanner) {
+    public void handleCreateProject(Scanner scanner){
         System.out.println("\n--- Create New Project ---");
         System.out.print("Enter project name: ");
         String name = scanner.nextLine();
@@ -339,32 +483,47 @@ public class HDBManager extends User {
         String neighborhood = scanner.nextLine();
 
         Map<FlatType, Integer> remainingUnits = new HashMap<>();
-        System.out.println("Enter remaining units for 2-Room flats: ");
-        if (scanner.hasNextInt()) {
-            remainingUnits.put(FlatType.TWOROOM, scanner.nextInt());
-            scanner.nextLine(); // Consume newline
-        } else {
-            System.out.println("Invalid input for 2-Room units.");
-            scanner.nextLine(); // Consume invalid input
-            return;
+
+        System.out.print("Are there 2-Room flats in this project? (yes/no): ");
+        if (scanner.nextLine().trim().equalsIgnoreCase("yes")) {
+            System.out.println("Enter remaining units for 2-Room flats: ");
+            if (scanner.hasNextInt()) {
+                remainingUnits.put(FlatType.TWOROOM, scanner.nextInt());
+                scanner.nextLine(); // Consume newline
+            } else {
+                System.out.println("Invalid input for 2-Room units.");
+                scanner.nextLine(); // Consume invalid input
+                return;
+            }
         }
-        System.out.println("Enter remaining units for 3-Room flats: ");
-        if (scanner.hasNextInt()) {
-            remainingUnits.put(FlatType.THREEROOM, scanner.nextInt());
-            scanner.nextLine(); // Consume newline
-        } else {
-            System.out.println("Invalid input for 3-Room units.");
-            scanner.nextLine(); // Consume invalid input
+
+        System.out.print("Are there 3-Room flats in this project? (yes/no): ");
+        if (scanner.nextLine().trim().equalsIgnoreCase("yes")) {
+            System.out.println("Enter remaining units for 3-Room flats: ");
+            if (scanner.hasNextInt()) {
+                remainingUnits.put(FlatType.THREEROOM, scanner.nextInt());
+                scanner.nextLine(); // Consume newline
+            } else {
+                System.out.println("Invalid input for 3-Room units.");
+                scanner.nextLine(); // Consume invalid input
+                return;
+            }
+        }
+
+        if (remainingUnits.isEmpty()) {
+            System.out.println("Project must have remaining units for at least one flat type.");
             return;
         }
 
         System.out.print("Enter application open date (YYYY-MM-DD): ");
         String openDateStr = scanner.nextLine();
-        Date openDate = parseDate(openDateStr.replace('-', ' ').trim()); // Simple parsing
+        Date openDate = parseDate(openDateStr);
+        if (openDate == null) return;
 
         System.out.print("Enter application close date (YYYY-MM-DD): ");
         String closeDateStr = scanner.nextLine();
-        Date closeDate = parseDate(closeDateStr.replace('-', ' ').trim()); // Simple parsing
+        Date closeDate = parseDate(closeDateStr);
+        if (closeDate == null) return;
 
         System.out.print("Enter maximum number of officers for this project (up to " + MAX_OFFICERS_PROJECT + "): ");
         int maxOfficers;
@@ -387,27 +546,45 @@ public class HDBManager extends User {
 
     public void handleDeleteProject(Scanner scanner) {
         System.out.println("\n--- Delete Project ---");
-        if (projectsCreated.isEmpty()) {
-            System.out.println("No projects created by you to delete.");
+        List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
+        if (allProjects.isEmpty()) {
+            System.out.println("No projects available to delete.");
             return;
         }
-        System.out.println("Your Created Projects:");
-        for (BTOProject project : projectsCreated) {
-            System.out.println("- " + project.getName() + (handlingProject != null && handlingProject.equals(project) ? " (Currently Handling)" : ""));
+        System.out.println("All Available Projects:");
+        for (BTOProject project : allProjects) {
+            System.out.println("- " + project.getName() + (handlingProject != null && handlingProject.equals(project) ? " (Currently Handling)" : "") + (projectsCreated.contains(project) ? " (Created by You)" : ""));
         }
         System.out.print("Enter the name of the project to delete: ");
         String projectNameToDelete = scanner.nextLine().trim();
-        BTOProject projectToDelete = null;
-        for (BTOProject project : projectsCreated) {
-            if (project.getName().equalsIgnoreCase(projectNameToDelete)) {
-                projectToDelete = project;
-                break;
-            }
-        }
+        BTOProject projectToDelete = ProjectRegistry.findProject(projectNameToDelete);
+
         if (projectToDelete != null) {
             deleteProject(projectToDelete);
         } else {
-            System.out.println("Error: Project with name '" + projectNameToDelete + "' not found in your created projects.");
+            System.out.println("Error: Project with name '" + projectNameToDelete + "' not found.");
+        }
+    }
+
+    public void handleEditProject(Scanner scanner) {
+        System.out.println("\n--- Edit Project ---");
+        List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
+        if (allProjects.isEmpty()) {
+            System.out.println("No projects available to edit.");
+            return;
+        }
+        System.out.println("All Available Projects:");
+        for (BTOProject project : allProjects) {
+            System.out.println("- " + project.getName());
+        }
+        System.out.print("Enter the name of the project to edit: ");
+        String projectNameToEdit = scanner.nextLine().trim();
+        BTOProject projectToEdit = ProjectRegistry.findProject(projectNameToEdit);
+
+        if (projectToEdit != null) {
+            editProjectDetails(scanner, projectToEdit);
+        } else {
+            System.out.println("Error: Project with name '" + projectNameToEdit + "' not found.");
         }
     }
 
@@ -502,44 +679,51 @@ public class HDBManager extends User {
     }
 
     public void handleHandleApplication(Scanner scanner) {
-        System.out.println("\n--- Handle Application ---");
+        System.out.println("\n--- Handle Application / View All Applications ---");
         if (handlingProject == null) {
-            System.out.println("No handling project set. Cannot handle applications.");
+            System.out.println("No handling project set. Cannot view or handle applications.");
             return;
         }
-        if (handlingProject.getApplications().isEmpty()) {
-            System.out.println("No pending applications for " + handlingProject.getName() + ".");
+
+        List<Application> allProjectApplications = handlingProject.getApplications();
+        if (allProjectApplications.isEmpty()) {
+            System.out.println("No applications found for project: " + handlingProject.getName());
             return;
         }
-        System.out.println("Pending Applications for " + handlingProject.getName() + ":");
-        for (Application app : handlingProject.getApplications()) {
-            if (app.getApplicationStatus() == ApplicationStatus.PENDING) {
-                System.out.println("Application ID: " + app.getApplicationId() + ", Applicant Name: " + app.getApplicant().getName() + " (NRIC: " + app.getApplicant().getNRIC() + ")");
-            }
+
+        System.out.println("All Applications for Project: " + handlingProject.getName() + ":");
+        for (Application app : allProjectApplications) {
+            System.out.println("Application ID: " + app.getApplicationId() +
+                    ", Applicant: " + app.getApplicant().getName() +
+                    " (NRIC: " + app.getApplicant().getNRIC() + ")" +
+                    ", Status: " + app.getApplicationStatus());
         }
-        System.out.print("Enter the Application ID of the application to handle: ");
+
+        System.out.print("\nEnter the Application ID to handle (or 0 to go back): ");
         if (scanner.hasNextInt()) {
             int applicationIdToHandle = scanner.nextInt();
             scanner.nextLine();
-            Application selectedApplication = null;
-            for (Application app : handlingProject.getApplications()) {
-                if (app.getApplicationId() == applicationIdToHandle && app.getApplicationStatus() == ApplicationStatus.PENDING) {
-                    selectedApplication = app;
-                    break;
+            if (applicationIdToHandle > 0) {
+                Application selectedApplication = null;
+                for (Application app : allProjectApplications) {
+                    if (app.getApplicationId() == applicationIdToHandle && app.getApplicationStatus() == ApplicationStatus.PENDING) {
+                        selectedApplication = app;
+                        break;
+                    }
                 }
-            }
-            if (selectedApplication != null) {
-                System.out.print("Approve (yes/no): ");
-                String response = scanner.nextLine().trim().toLowerCase();
-                if (response.equals("yes")) {
-                    handleApplication(selectedApplication, ApplicationStatus.SUCCESSFUL);
-                } else if (response.equals("no")) {
-                    handleApplication(selectedApplication, ApplicationStatus.UNSUCCESSFUL);
+                if (selectedApplication != null) {
+                    System.out.print("Approve (yes/no): ");
+                    String response = scanner.nextLine().trim().toLowerCase();
+                    if (response.equals("yes")) {
+                        handleApplication(selectedApplication, ApplicationStatus.SUCCESSFUL);
+                    } else if (response.equals("no")) {
+                        handleApplication(selectedApplication, ApplicationStatus.UNSUCCESSFUL);
+                    } else {
+                        System.out.println("Invalid response.");
+                    }
                 } else {
-                    System.out.println("Invalid response.");
+                    System.out.println("Error: Invalid or already handled Application ID.");
                 }
-            } else {
-                System.out.println("Error: Invalid or already handled Application ID.");
             }
         } else {
             System.out.println("Invalid input for Application ID.");
@@ -698,7 +882,7 @@ public class HDBManager extends User {
         System.out.print("Enter the ID of the enquiry to reply to: ");
         if (scanner.hasNextInt()) {
             int enquiryId = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
+            scanner.nextLine();
             Enquiry targetEnquiry = null;
             for (Enquiry enquiry : handlingProject.getEnquiries()) {
                 if (enquiry.getEnquiryId() == enquiryId) {
@@ -715,7 +899,7 @@ public class HDBManager extends User {
             }
         } else {
             System.out.println("Invalid input for enquiry ID.");
-            scanner.nextLine(); // Consume invalid input
+            scanner.nextLine();
         }
     }
 
@@ -824,5 +1008,78 @@ public class HDBManager extends User {
                 scanner.nextLine(); // Consume invalid input
             }
         }
+    }
+
+    public void handleGenerateReport(Scanner scanner) {
+        System.out.println("\n--- Generate Booking Report ---");
+
+        if (handlingProject == null) {
+            System.out.println("No handling project set. Cannot generate a report.");
+            return;
+        }
+
+        List<Application> bookedApplications = handlingProject.getApplications().stream()
+                .filter(app -> app.getApplicationStatus() == ApplicationStatus.BOOKED)
+                .collect(Collectors.toList());
+
+        if (bookedApplications.isEmpty()) {
+            System.out.println("No booked applications in the current handling project.");
+            return;
+        }
+
+        int choice;
+        do {
+            System.out.println("\n--- Report Filters ---");
+            System.out.println("1. All Booked Applicants");
+            System.out.println("2. Filter by Marital Status");
+            System.out.println("3. Filter by Flat Type");
+            System.out.println("0. Back to Manager Menu");
+            System.out.print("Enter your choice: ");
+
+            if (scanner.hasNextInt()) {
+                choice = scanner.nextInt();
+                scanner.nextLine(); // Consume newline
+
+                switch (choice) {
+                    case 1:
+                        generateBookingReport(bookedApplications, null, null);
+                        break;
+                    case 2:
+                        System.out.print("Enter marital status to filter (SINGLE/MARRIED): ");
+                        String maritalStatusStr = scanner.nextLine().trim().toUpperCase();
+                        try {
+                            MaritalStatus filterStatus = MaritalStatus.valueOf(maritalStatusStr);
+                            List<Application> filteredByMaritalStatus = bookedApplications.stream()
+                                    .filter(app -> app.getApplicant().getMaritalStatus() == filterStatus)
+                                    .collect(Collectors.toList());
+                            generateBookingReport(filteredByMaritalStatus, "Marital Status: " + filterStatus, null);
+                        } catch (IllegalArgumentException e) {
+                            System.out.println("Invalid marital status entered.");
+                        }
+                        break;
+                    case 3:
+                        System.out.print("Enter flat type to filter (2ROOM/3ROOM): ");
+                        String flatTypeStr = scanner.nextLine().trim().toUpperCase();
+                        try {
+                            FlatType filterType = FlatType.valueOf(flatTypeStr);
+                            List<Application> filteredByFlatType = bookedApplications.stream()
+                                    .filter(app -> app.getAppliedFlatType() == filterType)
+                                    .collect(Collectors.toList());
+                            generateBookingReport(filteredByFlatType, null, "Flat Type: " + filterType);
+                        } catch (IllegalArgumentException e) {
+                            System.out.println("Invalid flat type entered.");
+                        }
+                        break;
+                    case 0:
+                        System.out.println("Returning to Manager Menu.");
+                        return;
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                }
+            } else {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.nextLine(); // Consume invalid input
+            }
+        } while (true);
     }
 }

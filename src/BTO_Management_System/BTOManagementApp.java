@@ -44,10 +44,10 @@ public class BTOManagementApp {
             int mainChoice = -1;
             if (mainScanner.hasNextInt()) {
                 mainChoice = mainScanner.nextInt();
-                mainScanner.nextLine(); // Consume newline
+                mainScanner.nextLine();
             } else {
                 System.out.println("Invalid input. Please enter a number.");
-                mainScanner.nextLine(); // Consume invalid input
+                mainScanner.nextLine();
             }
 
             if (mainChoice == 2) {
@@ -81,9 +81,12 @@ public class BTOManagementApp {
     private static User login(Scanner scanner) {
         System.out.print("Enter your NRIC (User ID): ");
         String nric = scanner.nextLine().trim().toUpperCase();
+        if (!isValidNric(nric)) {
+            System.out.println("Error: Invalid NRIC format. Please use 'S' or 'T' followed by 7 digits and a letter (e.g., S0000000A).");
+            return null;
+        }
         System.out.print("Enter your password: ");
         String password = scanner.nextLine();
-
         for (User user : users) {
             if (user.getNRIC().equals(nric) && user.getPassword().equals(password)) {
                 return user;
@@ -200,6 +203,7 @@ public class BTOManagementApp {
             System.out.println("5. Book Flat");
             System.out.println("6. Generate Receipt");
             System.out.println("7. Register for a project");
+            System.out.println("8. View Registration Status");
             System.out.println("\n--- Applicant Actions (as Officer) ---");
             System.out.println("10. View Available Projects");
             System.out.println("11. Apply for Project");
@@ -237,17 +241,20 @@ public class BTOManagementApp {
                     case 7:
                         officer.handleRegister(scanner);
                         break;
+                    case 8:
+                        officer.handleViewRegistrationStatus();
+                        break;
                     case 10:
-                        ((Applicant) officer).viewAvailableProjects();
+                        ((Applicant) officer).handleViewAvailableProjects(scanner);
                         break;
                     case 11:
                         ((Applicant) officer).handleApplyForProject(scanner);
                         break;
                     case 12:
-                        ((Applicant) officer).viewApplicationStatus();
+                        ((Applicant) officer).handleViewApplicationStatus();
                         break;
                     case 13:
-                        ((Applicant) officer).viewAppliedProject();
+                        ((Applicant) officer).handleViewAppliedProject();
                         break;
                     case 14:
                         ((Applicant) officer).handleSubmitEnquiry(scanner);
@@ -280,23 +287,25 @@ public class BTOManagementApp {
             System.out.println("\nHDB Manager Menu:");
             System.out.println("1. Create Project");
             System.out.println("2. Delete Project");
-            System.out.println("3. View Own Created Projects");
-            System.out.println("4. Set Handling Project");
-            System.out.println("5. Change Handling Project Visibility");
-            System.out.println("6. View All Projects");
-            System.out.println("7. View All Officer Applications");
-            System.out.println("8. Handle Officer Registration");
-            System.out.println("9. Handle Application");
-            System.out.println("10. Review Withdrawal Requests");
-            System.out.println("11. View All Enquiries");
-            System.out.println("12. View Own Enquiries");
-            System.out.println("13. Reply Enquiry");
-            System.out.println("14. Change Password");
+            System.out.println("3. Edit Project");
+            System.out.println("4. View Own Created Projects");
+            System.out.println("5. Set Handling Project");
+            System.out.println("6. Change Handling Project Visibility");
+            System.out.println("7. View All Projects");
+            System.out.println("8. View All Officer Applications");
+            System.out.println("9. Handle Officer Registration");
+            System.out.println("10. Handle Application / View All Applications");
+            System.out.println("11. Review Withdrawal Requests");
+            System.out.println("12. View All Enquiries");
+            System.out.println("13. View Enquiries for Handling Project");
+            System.out.println("14. Reply Enquiry");
+            System.out.println("15. Change Password");
+            System.out.println("16. Generate Booking Report");
             System.out.println("0. Logout");
             System.out.print("Enter your choice: ");
             if (scanner.hasNextInt()) {
                 choice = scanner.nextInt();
-                scanner.nextLine(); // Consume newline
+                scanner.nextLine();
 
                 switch (choice) {
                     case 1:
@@ -306,40 +315,46 @@ public class BTOManagementApp {
                         manager.handleDeleteProject(scanner);
                         break;
                     case 3:
-                        manager.viewOwnCreatedProjects();
+                        manager.handleEditProject(scanner);
                         break;
                     case 4:
-                        manager.handleSetHandlingProject(scanner);
+                        manager.viewOwnCreatedProjects();
                         break;
                     case 5:
-                        manager.handleChangeHandlingProjectVisibility(scanner);
+                        manager.handleSetHandlingProject(scanner);
                         break;
                     case 6:
-                        manager.handleViewAllProjects(scanner);
+                        manager.handleChangeHandlingProjectVisibility(scanner);
                         break;
                     case 7:
-                        manager.handleViewAllOfficerApplications();
+                        manager.handleViewAllProjects(scanner);
                         break;
                     case 8:
-                        manager.handleHandleOfficerRegistration(scanner);
+                        manager.handleViewAllOfficerApplications();
                         break;
                     case 9:
-                        manager.handleHandleApplication(scanner);
+                        manager.handleHandleOfficerRegistration(scanner);
                         break;
                     case 10:
-                        manager.handleReviewWithdrawalRequests(scanner);
+                        manager.handleHandleApplication(scanner);
                         break;
                     case 11:
-                        manager.handleViewAllEnquiries(scanner);
+                        manager.handleReviewWithdrawalRequests(scanner);
                         break;
                     case 12:
-                        manager.handleViewOwnEnquiries(scanner);
+                        manager.handleViewAllEnquiries(scanner);
                         break;
                     case 13:
-                        manager.handleReplyEnquiry(scanner);
+                        manager.handleViewOwnEnquiries(scanner);
                         break;
                     case 14:
+                        manager.handleReplyEnquiry(scanner);
+                        break;
+                    case 15:
                         changePassword(manager, scanner);
+                        break;
+                    case 16:
+                        manager.handleGenerateReport(scanner);
                         break;
                     case 0:
                         System.out.println("Logging out...");

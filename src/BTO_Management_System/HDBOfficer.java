@@ -9,7 +9,6 @@ public class HDBOfficer extends Applicant {
     private RegistrationApplication registrationApplication;
     private HDBManager assignedManager;
 
-    // Constructor
     public HDBOfficer(String name, String nric, int age, MaritalStatus maritalStatus) {
         super(name, nric, age, maritalStatus);
     }
@@ -50,13 +49,27 @@ public class HDBOfficer extends Applicant {
 
     @Override
     protected boolean isEligibleToApply(BTOProject project) {
+        if (!project.isVisible()) {
+            return false;
+        }
         if (this.application != null) {
             return false;
         }
         if (this.registrationApplication != null && this.registrationApplication.getProjectApplied() == project) {
             return false;
         }
-        return true;
+        if (maritalStatus == MaritalStatus.SINGLE) {
+            if (age < 35) {
+                return false;
+            }
+            return project.getFlatTypes().contains(FlatType.TWOROOM);
+        } else if (maritalStatus == MaritalStatus.MARRIED) {
+            if (age < 21) {
+                return false;
+            }
+            return project.getFlatTypes().contains(FlatType.TWOROOM) || project.getFlatTypes().contains(FlatType.THREEROOM); // Married 21+ eligible for both
+        }
+        return false;
     }
 
     private void register(BTOProject project) {
@@ -248,7 +261,7 @@ public class HDBOfficer extends Applicant {
         System.out.print("Please enter the enquiry ID to reply to: ");
         if (scanner.hasNextInt()) {
             int enquiryId = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
+            scanner.nextLine();
             if (enquiryInHandlingProject(enquiryId)) {
                 System.out.print("Enter your reply: ");
                 String replyText = scanner.nextLine();
@@ -268,9 +281,7 @@ public class HDBOfficer extends Applicant {
             System.out.println("You are not assigned to a handling project!");
             return;
         }
-        List<Application> successfulApplications = handlingProject.getApplications().stream()
-                .filter(app -> app.getApplicationStatus() == ApplicationStatus.SUCCESSFUL && app.getAppliedFlatType() == null)
-                .collect(Collectors.toList());
+        List<Application> successfulApplications = handlingProject.getSuccessfulApplications();
 
         if (successfulApplications.isEmpty()) {
             System.out.println("No successful applications awaiting booking for the handled project.");
@@ -295,7 +306,7 @@ public class HDBOfficer extends Applicant {
             }
 
             if (selectedApplication != null) {
-                System.out.print("Enter the flat type to book (2ROOM / 3ROOM): ");
+                System.out.print("Enter the flat type to book (TWOROOM / THREEROOM): ");
                 String flatTypeStr = scanner.nextLine().trim().toUpperCase();
                 FlatType selectedFlatType = null;
                 try {
@@ -372,10 +383,21 @@ public class HDBOfficer extends Applicant {
                 return;
             }
             register(targetProject);
-            System.out.println("You have successfully registered for project: " + projectName);
         }else {
             System.out.println("Invalid input for project name");
             scanner.nextLine();
+        }
+    }
+    public void handleViewRegistrationStatus() {
+        RegisterStatus status = getRegistrationStatus();
+        if (status == null) {
+            System.out.println("You have not registered for any project to handle yet.");
+        } else {
+            System.out.println("Your registration status is: " + status);
+            if (registrationApplication != null) {
+                System.out.println("Project Registered For: " + registrationApplication.getProjectApplied().getName());
+                System.out.println("Registration ID: " + registrationApplication.getRegisterId());
+            }
         }
     }
 }

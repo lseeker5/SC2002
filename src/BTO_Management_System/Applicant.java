@@ -55,10 +55,6 @@ public class Applicant extends User {
     }
 
     protected void apply(BTOProject project, FlatType flatType) {
-        if (application != null) {
-            System.out.println("You already have an application!");
-            return;
-        }
         if (!getAvailableProjects().contains(project)) {
             System.out.println("You are not allowed to apply for this project based on your eligibility!");
             return;
@@ -71,17 +67,21 @@ public class Applicant extends User {
             System.out.println("The selected flat type (" + flatType + ") in project " + project.getName() + " is currently unavailable!");
             return;
         }
-        if (maritalStatus == MaritalStatus.SINGLE && age < 35) {
-            System.out.println("Single applicants must be 35 years old and above to apply.");
-            return;
-        }
-        else if (flatType != FlatType.TWOROOM) {
-            System.out.println("Singles 35 years old and above can only apply for 2-Room flats.");
-            return;
-        }
-        if (maritalStatus == MaritalStatus.MARRIED && age < 21) {
-            System.out.println("Married applicants must be 21 years old and above to apply.");
-            return;
+        if (maritalStatus == MaritalStatus.SINGLE) {
+            if (age < 35) {
+                System.out.println("Single applicants must be 35 years old and above to apply.");
+                return;
+            }
+            if (flatType != FlatType.TWOROOM) {
+                System.out.println("Singles 35 years old and above can only apply for 2-Room flats.");
+                return;
+            }
+        } else if (maritalStatus == MaritalStatus.MARRIED) {
+            if (age < 21) {
+                System.out.println("Married applicants must be 21 years old and above to apply.");
+                return;
+            }
+            // Married applicants 21 and above can apply for any flat type, so no further checks needed here for flat type.
         }
         application = new Application(this, project, ApplicationStatus.PENDING, flatType);
         project.getApplications().add(application);
@@ -332,6 +332,10 @@ public class Applicant extends User {
     }
     public void handleApplyForProject(Scanner scanner) {
         System.out.println("\n--- Apply for Project ---");
+        if (this.application != null) {
+            System.out.println("You already have an existing application (ID: " + this.application.getApplicationId() + ")! You cannot apply for another project.");
+            return;
+        }
         List<BTOProject> availableProjects = getAvailableProjects();
         if (availableProjects.isEmpty()) {
             System.out.println("Sorry, there is no available project for you.");
