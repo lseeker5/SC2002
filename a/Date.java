@@ -1,7 +1,4 @@
-package BTO_Management_System;
-
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+package a;
 
 public class Date {
     private int day;

@@ -1,4 +1,4 @@
-package BTO_Management_System;
+package a;
 
 public class Enquiry {
     private static int counter = 1;

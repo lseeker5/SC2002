@@ -1,4 +1,4 @@
-package BTO_Management_System;
+package a;
 
 public enum RegisterStatus {
     Pending, SUCCESSFUL, UNSUCCESSFUL
