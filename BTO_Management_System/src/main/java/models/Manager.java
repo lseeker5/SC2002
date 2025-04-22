@@ -1,12 +1,14 @@
 package models;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Manager extends User{
     private List<Project> createdProjects = new ArrayList<>();
 
-    public Manager(String nric, int age, String maritalStatus) {
-        super(nric, age, maritalStatus);
+    public Manager(String name, String nric, int age, MaritalStatus maritalStatus) {
+
+        super(name, nric, age, maritalStatus);
     }
 
     public void createProject(String name, String neighborhood) {}

@@ -4,8 +4,8 @@ public class Officer extends Applicant {
     private Project assignedProject;
     private boolean registrationApproved = false;
 
-    public Officer(String nric, int age, String maritalStatus) {
-        super(nric, age, maritalStatus);
+    public Officer(String name, String nric, int age, MaritalStatus maritalStatus) {
+        super(name, nric, age, maritalStatus);
     }
 
     public void registerAsOfficer(Project project) {}
