@@ -3,7 +3,7 @@ package BTO_Management_System;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class HDBManager extends User {
+public class HDBManager extends User implements OfficerApplicationManager, ProjectCreator, ProjectEditor, ProjectVisibilityManager, ApplicationReviewer, WithdrawalReviewer, ProjectAssignmentManager, ReportGenerator, WithdrawalProcessor{
     private List<BTOProject> projectsCreated;
     private static final int MAX_OFFICERS_PROJECT = 10;
     private BTOProject handlingProject;
@@ -309,7 +309,7 @@ public class HDBManager extends User {
         System.out.println("Reply sent to applicant (Enquiry ID: " + enquiry.getEnquiryId() + "): " + response);
     }
 
-    private void setHandlingProject(BTOProject project) {
+    public void setHandlingProject(BTOProject project) {
         if (this.handlingProject != null) {
             System.out.println("You are already handling project: " + this.handlingProject.getName());
             return;
@@ -322,7 +322,7 @@ public class HDBManager extends User {
         }
     }
 
-    private void generateBookingReport(List<Application> applications, String maritalFilter, String flatTypeFilter) {
+    public void generateBookingReport(List<Application> applications, String maritalFilter, String flatTypeFilter) {
         System.out.println("\n--- Booking Report for Project: " + handlingProject.getName() + " ---");
         if (maritalFilter != null) {
             System.out.println("Filter: " + maritalFilter);
@@ -352,7 +352,7 @@ public class HDBManager extends User {
         System.out.println("Total Booked Applicants: " + applications.size());
     }
 
-    private void editProjectDetails(Scanner scanner, BTOProject project) {
+    public void editProjectDetails(Scanner scanner, BTOProject project) {
         int choice;
         do {
             System.out.println("\n--- Editing Project: " + project.getName() + " ---");

@@ -4,7 +4,8 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.stream.Collectors;
 
-public class HDBOfficer extends Applicant {
+
+public class HDBOfficer extends Applicant implements ProjectApplicant, Enquirer, EnquiryViewer, ProjectRegistrationRequester, BookingOfficer{
     private BTOProject handlingProject;
     private RegistrationApplication registrationApplication;
     private HDBManager assignedManager;
@@ -72,18 +73,25 @@ public class HDBOfficer extends Applicant {
         return false;
     }
 
-    private void register(BTOProject project) {
-        if (!isEligibleToRegister(project)) {
+    @Override
+    public void register(ProjectViewable project) {
+        if (!(project instanceof BTOProject)) {
+            System.out.println("Error: Invalid project type for registration.");
+            return;
+        }
+        BTOProject btoProject = (BTOProject) project;
+        if (!isEligibleToRegister(btoProject)) {
             System.out.println("You are not eligible to register for this project!");
             return;
         }
-        RegistrationApplication newApplication = new RegistrationApplication(this, project, RegisterStatus.Pending);
+        RegistrationApplication newApplication = new RegistrationApplication(this, btoProject, RegisterStatus.Pending);
         this.registrationApplication = newApplication;
-        project.addRegisterApplication(newApplication);
-        System.out.println("You have successfully registered to handle project: " + project.getName() + ", waiting for approval from its manager.");
+        btoProject.addRegisterApplication(newApplication);
+        System.out.println("You have successfully registered to handle project: " + btoProject.getName() + ", waiting for approval from its manager.");
     }
 
-    private RegisterStatus getRegistrationStatus() {
+    @Override
+    public RegisterStatus getRegistrationStatus() {
         if (this.registrationApplication == null) {
             return null;
         }
@@ -91,25 +99,35 @@ public class HDBOfficer extends Applicant {
     }
 
     @Override
-    protected void apply(BTOProject project, FlatType flatType) {
+    public RegistrationApplication getRegistrationApplication() {
+        return this.registrationApplication;
+    }
+
+    @Override
+    public void apply(ProjectViewable project, FlatType flatType) { // Changed to public
         if (this.application != null) {
             System.out.println("You already have an application!");
             return;
         }
-        if (!this.isEligibleToApply(project)) {
+        if (!(project instanceof BTOProject)) {
+            System.out.println("Error: Invalid project type for application.");
+            return;
+        }
+        BTOProject btoProject = (BTOProject) project;
+        if (!this.isEligibleToApply(btoProject)) {
             System.out.println("You are not eligible to apply for this project!");
             return;
         }
-        this.application = new Application(this, project, ApplicationStatus.PENDING, flatType);
-        project.getApplications().add(this.application);
-        System.out.println("Successfully applied for project: " + project.getName());
+        this.application = new Application(this, btoProject, ApplicationStatus.PENDING, flatType);
+        btoProject.getApplications().add(this.application);
+        System.out.println("Successfully applied for project: " + btoProject.getName());
     }
 
-    private boolean assignedToProject() {
+    public boolean assignedToProject() {
         return this.handlingProject != null;
     }
 
-    private void viewHandlingProjectDetails() {
+    public void viewHandlingProjectDetails() {
         if (this.handlingProject != null) {
             System.out.println("Your handling project information is as follows:");
             System.out.println(this.handlingProject.getDetails());
@@ -118,11 +136,11 @@ public class HDBOfficer extends Applicant {
         }
     }
 
-    private boolean handlingProjectEnquiryIsEmpty() {
+    public boolean handlingProjectEnquiryIsEmpty() {
         return handlingProject == null || handlingProject.getEnquiries().isEmpty();
     }
 
-    private void showAllHandlingProjectEnquiries() {
+    public void showAllHandlingProjectEnquiries() {
         if (handlingProject != null) {
             this.handlingProject.showEnquiries();
         } else {
@@ -130,7 +148,7 @@ public class HDBOfficer extends Applicant {
         }
     }
 
-    private boolean enquiryInHandlingProject(int enquiryId) {
+    public boolean enquiryInHandlingProject(int enquiryId) {
         if (handlingProject != null) {
             for (Enquiry enquiry : handlingProject.getEnquiries()) {
                 if (enquiry.getEnquiryId() == enquiryId) {
@@ -141,7 +159,7 @@ public class HDBOfficer extends Applicant {
         return false;
     }
 
-    private void viewHandlingProjectEnquiry(int enquiryId) {
+    public void viewHandlingProjectEnquiry(int enquiryId) {
         if (handlingProject != null) {
             for (Enquiry enquiry : handlingProject.getEnquiries()) {
                 if (enquiry.getEnquiryId() == enquiryId) {
@@ -159,7 +177,7 @@ public class HDBOfficer extends Applicant {
         System.out.println("Enquiry with ID " + enquiryId + " not found in the handling project.");
     }
 
-    private void replyHandlingProjectEnquiry(int enquiryId, String response) {
+    public void replyHandlingProjectEnquiry(int enquiryId, String response) {
         if (handlingProject != null) {
             for (Enquiry enquiry : handlingProject.getEnquiries()) {
                 if (enquiry.getEnquiryId() == enquiryId) {
@@ -172,8 +190,7 @@ public class HDBOfficer extends Applicant {
         System.out.println("Enquiry with ID " + enquiryId + " not found in the handling project.");
     }
 
-
-    private void bookFlat(Application application, FlatType selectedFlatType) {
+    public void bookFlat(Application application, FlatType selectedFlatType) {
         if (application.getApplicationStatus() == ApplicationStatus.SUCCESSFUL) {
             BTOProject project = application.getProjectApplied();
             if (project.getRemainingUnits().containsKey(selectedFlatType) && project.getRemainingUnits().get(selectedFlatType) > 0) {
@@ -189,7 +206,7 @@ public class HDBOfficer extends Applicant {
         }
     }
 
-    private void generateReceipt(Application application) {
+    public void generateReceipt(Application application) {
         Applicant applicant = application.getApplicant();
         BTOProject project = application.getProjectApplied();
         System.out.println("--Receipt for HDB house booking--");
@@ -208,12 +225,6 @@ public class HDBOfficer extends Applicant {
         this.handlingProject = project;
         System.out.println("You are now handling project: " + project.getName());
     }
-
-
-
-
-
-    // UI Handling Functions
 
     public void handleViewHandlingProjectDetails() {
         viewHandlingProjectDetails();
@@ -388,16 +399,86 @@ public class HDBOfficer extends Applicant {
             scanner.nextLine();
         }
     }
+
     public void handleViewRegistrationStatus() {
         RegisterStatus status = getRegistrationStatus();
         if (status == null) {
             System.out.println("You have not registered for any project to handle yet.");
         } else {
-            System.out.println("Your registration status is: " + status);
+            System.out.println("Your registration status is:" + status);
             if (registrationApplication != null) {
                 System.out.println("Project Registered For: " + registrationApplication.getProjectApplied().getName());
                 System.out.println("Registration ID: " + registrationApplication.getRegisterId());
             }
+        }
+    }
+
+    @Override
+    public List<Enquiry> getEnquiries() {
+        if (handlingProject != null) {
+            return handlingProject.getEnquiries();
+        }
+        return super.getEnquiries(); // Returns personal enquiries if not handling a project
+    }
+
+    @Override
+    public Enquiry findEnquiryById(int enquiryId) {
+        if (handlingProject != null) {
+            for (Enquiry enquiry : handlingProject.getEnquiries()) {
+                if (enquiry.getEnquiryId() == enquiryId) {
+                    return enquiry;
+                }
+            }
+        }
+        return super.findEnquiryById(enquiryId); // Checks personal enquiries if not handling a project
+    }
+
+    @Override
+    public void showAllEnquiries() {
+        if (handlingProject != null) {
+            showAllHandlingProjectEnquiries();
+        } else {
+            super.showAllEnquiries(); // Shows personal enquiries if not handling a project
+        }
+    }
+
+    @Override
+    public void viewEnquiry(int enquiryId) {
+        if (handlingProject != null && enquiryInHandlingProject(enquiryId)) {
+            viewHandlingProjectEnquiry(enquiryId);
+        } else {
+            super.viewEnquiry(enquiryId); // Views personal enquiry if not in handling project
+        }
+    }
+
+    @Override
+    public void submitEnquiry(ProjectViewable project, String enquiryText) {
+        if (handlingProject != null && handlingProject == project) {
+            System.out.println("As an officer handling this project, you cannot submit an enquiry for it.");
+        } else {
+            super.submitEnquiry(project, enquiryText); // Submit personal enquiry
+        }
+    }
+
+    @Override
+    public void viewAppliedProject() {
+        if (application != null) {
+            System.out.println("Your applied project information is as follows:");
+            System.out.println(application.getProjectApplied().getDetails());
+        } else if (registrationApplication != null) {
+            System.out.println("You have registered to handle project: " + registrationApplication.getProjectApplied().getName() + ". You have not applied for a BTO as an applicant yet.");
+        } else {
+            System.out.println("You have not applied for any project yet.");
+        }
+    }
+
+    @Override
+    public void viewApplicationStatus() {
+        if (application != null) {
+            ApplicationStatus currentStatus = this.application.getApplicationStatus();
+            System.out.println("Your current application status for project " + this.application.getProjectApplied().getName() + " is: " + currentStatus);
+        } else {
+            System.out.println("You have not applied to any project yet!");
         }
     }
 }
