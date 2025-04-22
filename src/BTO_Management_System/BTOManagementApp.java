@@ -8,12 +8,37 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+
+/**
+ * The main application class for the BTO (Build-To-Order) Management System.
+ * This class contains the entry point of the application and handles the
+ * main user interface and program flow.
+ */
 public class BTOManagementApp {
 
+    /**
+     * A list to store all users of the BTO Management System.
+     */
     private static List<User> users = new ArrayList<>();
-    private static ProjectRegistry projectRegistry = new ProjectRegistry();
+    /**
+     * The default password assigned to newly created users.
+     */
     private static final String DEFAULT_PASSWORD = "password";
 
+    /**
+     * Default constructor for the BTOManagementApp class.
+     */
+    public BTOManagementApp() {
+        // Empty constructor
+    }
+
+    /**
+     * The main entry point of the BTO Management System application.
+     * It initializes users, handles the login process, and displays the appropriate menu
+     * based on the user's role.
+     *
+     * @param args Command line arguments (not used).
+     */
     public static void main(String[] args) {
         System.out.println("Welcome to the BTO Management System Hub!");
         addInitialUsers();
@@ -44,10 +69,10 @@ public class BTOManagementApp {
             int mainChoice = -1;
             if (mainScanner.hasNextInt()) {
                 mainChoice = mainScanner.nextInt();
-                mainScanner.nextLine();
+                mainScanner.nextLine(); // Consume newline
             } else {
                 System.out.println("Invalid input. Please enter a number.");
-                mainScanner.nextLine();
+                mainScanner.nextLine(); // Consume invalid input
             }
 
             if (mainChoice == 2) {
@@ -58,6 +83,10 @@ public class BTOManagementApp {
         mainScanner.close();
     }
 
+    /**
+     * Adds a set of initial users (applicants, officers, and managers) to the system
+     * for testing and demonstration purposes. Each user is created with a default password.
+     */
     private static void addInitialUsers() {
         // Add Applicant
         users.add(new Applicant("John", "S1234567A", 35, MaritalStatus.SINGLE));
@@ -78,6 +107,13 @@ public class BTOManagementApp {
     }
 
 
+    /**
+     * Handles the user login process. Prompts the user for their NRIC and password,
+     * and authenticates them against the list of registered users.
+     *
+     * @param scanner The Scanner object to read user input.
+     * @return The logged-in User object if authentication is successful, null otherwise.
+     */
     private static User login(Scanner scanner) {
         System.out.print("Enter your NRIC (User ID): ");
         String nric = scanner.nextLine().trim().toUpperCase();
@@ -95,6 +131,13 @@ public class BTOManagementApp {
         return null;
     }
 
+    /**
+     * Allows a logged-in user to change their password. Prompts for the current password
+     * and then the new password, updating the user's password if the current password is correct.
+     *
+     * @param user    The User object whose password needs to be changed.
+     * @param scanner The Scanner object to read user input.
+     */
     private static void changePassword(User user, Scanner scanner) {
         System.out.print("Do you want to change your password? (yes/no): ");
         String choice = scanner.nextLine().trim().toLowerCase();
@@ -112,12 +155,29 @@ public class BTOManagementApp {
         }
     }
 
+    /**
+     * Validates the format of a Singaporean NRIC (National Registration Identity Card).
+     * It checks if the NRIC starts with 'S' or 'T', followed by 7 digits, and ends with an uppercase letter.
+     *
+     * @param nric The NRIC string to validate.
+     * @return true if the NRIC format is valid, false otherwise.
+     */
     private static boolean isValidNric(String nric) {
         Pattern pattern = Pattern.compile("^[ST]\\d{7}[A-Z]$");
         Matcher matcher = pattern.matcher(nric);
         return matcher.matches();
     }
 
+    /**
+     * Parses a date string in the format "YYYY-MM-DD" into a Date object.
+     * If the format is incorrect or the date parts are not valid numbers, it returns null.
+     *
+     * @param s The date string to parse.
+     * @return A Date object representing the parsed date, or null if parsing fails.
+     * @deprecated This method seems to be for a custom Date class which is not shown.
+     * Consider using `java.time.LocalDate.parse()` for standard date handling.
+     */
+    @Deprecated
     private static Date parseDate(String s) {
         String[] parts = s.split("-");
         if (parts.length == 3) {
@@ -135,6 +195,12 @@ public class BTOManagementApp {
         return null;
     }
 
+    /**
+     * Displays the menu options for an applicant and handles their interactions.
+     *
+     * @param applicant The logged-in Applicant object.
+     * @param scanner   The Scanner object to read user input.
+     */
     private static void showApplicantMenu(Applicant applicant, Scanner scanner) {
         int choice;
         do {
@@ -151,7 +217,7 @@ public class BTOManagementApp {
             System.out.print("Enter your choice: ");
             if (scanner.hasNextInt()) {
                 choice = scanner.nextInt();
-                scanner.nextLine();
+                scanner.nextLine(); // Consume newline
                 switch (choice) {
                     case 1:
                         applicant.handleViewAvailableProjects(scanner);
@@ -185,12 +251,20 @@ public class BTOManagementApp {
                 }
             } else {
                 System.out.println("Invalid input. Please enter a number.");
-                scanner.nextLine();
+                scanner.nextLine(); // Consume invalid input
                 choice = -1;
             }
         } while (true);
     }
 
+    /**
+     * Displays the menu options for an HDB officer and handles their interactions.
+     * It includes actions related to managing projects, enquiries, and applications,
+     * as well as some actions that an officer can perform as an applicant.
+     *
+     * @param officer The logged-in HDBOfficer object.
+     * @param scanner The Scanner object to read user input.
+     */
     private static void showOfficerMenu(HDBOfficer officer, Scanner scanner) {
         int choice;
         do {
@@ -218,7 +292,7 @@ public class BTOManagementApp {
             System.out.print("Enter your choice: ");
             if (scanner.hasNextInt()) {
                 choice = scanner.nextInt();
-                scanner.nextLine();
+                scanner.nextLine(); // Consume newline
                 switch (choice) {
                     case 1:
                         officer.handleViewHandlingProjectDetails();
@@ -276,11 +350,20 @@ public class BTOManagementApp {
                 }
             } else {
                 System.out.println("Invalid input. Please enter a number.");
+                scanner.nextLine(); // Consume invalid input
             }
         } while (true);
     }
 
 
+    /**
+     * Displays the menu options for an HDB manager and handles their interactions.
+     * It includes actions related to project management, officer management, application handling,
+     * enquiry management, and generating reports.
+     *
+     * @param manager The logged-in HDBManager object.
+     * @param scanner The Scanner object to read user input.
+     */
     private static void showManagerMenu(HDBManager manager, Scanner scanner) {
         int choice;
         do {
@@ -305,7 +388,7 @@ public class BTOManagementApp {
             System.out.print("Enter your choice: ");
             if (scanner.hasNextInt()) {
                 choice = scanner.nextInt();
-                scanner.nextLine();
+                scanner.nextLine(); // Consume newline
 
                 switch (choice) {
                     case 1:
@@ -364,7 +447,7 @@ public class BTOManagementApp {
                 }
             } else {
                 System.out.println("Invalid input. Please enter a number.");
-                scanner.nextLine();
+                scanner.nextLine(); // Consume invalid input
             }
         } while (true);
     }

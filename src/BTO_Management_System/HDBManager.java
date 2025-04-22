@@ -3,27 +3,71 @@ package BTO_Management_System;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Represents an HDB Manager, a type of user with administrative privileges
+ * to manage BTO projects, officer applications, applications from the public,
+ * withdrawal requests, project assignments, and generate reports.
+ * Implements various interfaces related to these functionalities.
+ */
 public class HDBManager extends User implements OfficerApplicationManager, ProjectCreator, ProjectEditor, ProjectVisibilityManager, ApplicationReviewer, WithdrawalReviewer, ProjectAssignmentManager, ReportGenerator, WithdrawalProcessor{
+    /**
+     * A list of BTO projects created by this manager.
+     */
     private List<BTOProject> projectsCreated;
+    /**
+     * The maximum number of officers allowed per project.
+     */
     private static final int MAX_OFFICERS_PROJECT = 10;
+    /**
+     * The BTO project currently being handled by this manager.
+     */
     private BTOProject handlingProject;
+    /**
+     * A flag indicating if this manager has created their first project.
+     */
     private boolean hasCreatedFirstProject;
 
+    /**
+     * Constructs a new HDBManager with the specified details.
+     * Initializes an empty list for created projects and sets the
+     * {@code hasCreatedFirstProject} flag to false.
+     *
+     * @param name          The name of the manager.
+     * @param nric          The NRIC of the manager (user ID).
+     * @param age           The age of the manager.
+     * @param maritalStatus The marital status of the manager.
+     */
     public HDBManager(String name, String nric, int age, MaritalStatus maritalStatus) {
         super(name, nric, age, maritalStatus);
         this.projectsCreated = new ArrayList<>();
         this.hasCreatedFirstProject = false;
     }
 
+    /**
+     * Returns the role of the user, which is "Manager" for HDBManager.
+     *
+     * @return The string "Manager".
+     */
     @Override
     public String getRole() {
         return "Manager";
     }
 
+    /**
+     * Returns the list of BTO projects created by this manager.
+     *
+     * @return A list of {@link BTOProject} objects.
+     */
     public List<BTOProject> getProjectsCreated() {
         return projectsCreated;
     }
 
+    /**
+     * Overrides the equals method to compare HDBManager objects based on their NRIC.
+     *
+     * @param another The object to compare with.
+     * @return true if the other object is an HDBManager with the same NRIC, false otherwise.
+     */
     @Override
     public boolean equals(Object another) {
         if (this == another) {
@@ -36,6 +80,19 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         return this.nric.equals(temp.nric);
     }
 
+    /**
+     * Creates a new BTO project with the specified details and adds it to the
+     * list of projects created by this manager and to the global project registry.
+     * If this is the first project created by the manager, it is automatically
+     * set as the handling project.
+     *
+     * @param name                The name of the new project.
+     * @param neighborhood        The neighborhood where the project is located.
+     * @param remainingUnits      A map of {@link FlatType} to the number of remaining units.
+     * @param applicationOpenDate The date when applications for this project open.
+     * @param applicationCloseDate The date when applications for this project close.
+     * @param maxOfficers         The maximum number of officers allowed for this project (up to {@link #MAX_OFFICERS_PROJECT}).
+     */
     public void createProject(String name, String neighborhood,
                               Map<FlatType, Integer> remainingUnits, Date applicationOpenDate,
                               Date applicationCloseDate, int maxOfficers) {
@@ -59,13 +116,20 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Deletes a specified BTO project. Removes it from the list of projects
+     * created by this manager and from the global project registry. If the
+     * deleted project was the handling project, the handling project is set to null.
+     *
+     * @param project The {@link BTOProject} to be deleted.
+     */
     public void deleteProject(BTOProject project) {
         if (projectsCreated.contains(project)) {
             projectsCreated.remove(project);
-            ProjectRegistry.removeProject(project); // Add this line
+            ProjectRegistry.removeProject(project);
             System.out.println("Project " + project.getName() + " deleted.");
             if (handlingProject != null && handlingProject.equals(project)) {
-                handlingProject = null; // Clear handling project if the deleted one was being handled
+                handlingProject = null;
                 System.out.println("The deleted project was your handling project. No project is currently being handled.");
             }
         } else {
@@ -73,6 +137,12 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Parses a date string in the format "YYYY-MM-DD" into a {@link Date} object.
+     *
+     * @param s The date string to parse.
+     * @return A {@link Date} object representing the parsed date.
+     */
     private Date parseDate(String s) {
         int year = 1000 * (s.charAt(0) - '0') + 100 * (s.charAt(1) - '0') + 10 * (s.charAt(2) - '0') + (s.charAt(3) - '0');
         int month = 10 * (s.charAt(5) - '0') + (s.charAt(6) - '0');
@@ -80,7 +150,10 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         return new Date(day, month, year);
     }
 
-
+    /**
+     * Displays a list of all BTO projects created by this manager.
+     * If no projects have been created, a соответствующее message is displayed.
+     */
     public void viewOwnCreatedProjects() {
         List<BTOProject> createdProjects = this.getProjectsCreated();
         if (createdProjects.isEmpty()) {
@@ -93,23 +166,21 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Changes the visibility status of the currently handling project.
+     *
+     * @param visibility The new visibility status (true for visible, false for hidden).
+     */
     public void changeHandlingProjectVisibility(boolean visibility) {
         this.handlingProject.setVisibility(visibility);
         System.out.println("Project " + this.handlingProject.getName() + " visibility set to " + (visibility ? "ON" : "OFF"));
     }
 
-    public void viewAllProjects() {
-        List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
-        if (allProjects.isEmpty()) {
-            System.out.println("No BTO projects have been created yet.");
-        } else {
-            System.out.println("All BTO Projects:");
-            for (BTOProject project : allProjects) {
-                System.out.println(project.getDetails());  // or any relevant method
-            }
-        }
-    }
-
+    /**
+     * Displays all officer registration applications across all BTO projects.
+     * It iterates through each project in the registry and shows the pending,
+     * successful, or unsuccessful registration applications.
+     */
     public void viewAllOfficerApplications() {
         List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
         if (allProjects.isEmpty()){
@@ -133,6 +204,14 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Handles an officer registration application for the currently handling project.
+     * If the application is approved and the maximum number of officers for the project
+     * has not been reached, the officer is assigned to the project.
+     *
+     * @param registrationApplication The {@link RegistrationApplication} to handle.
+     * @param newStatus               The new status for the application ({@link RegisterStatus#SUCCESSFUL} or {@link RegisterStatus#UNSUCCESSFUL}).
+     */
     public void handleOfficerRegistration(RegistrationApplication registrationApplication, RegisterStatus newStatus) {
         if (this.handlingProject == null) {
             System.out.println("You have not been assigned to a project yet!");
@@ -149,8 +228,8 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
             }
             registrationApplication.setRegisterStatusStatus(RegisterStatus.SUCCESSFUL);
             HDBOfficer approvedOfficer = registrationApplication.getOfficer();
-            approvedOfficer.setHandlingProject(this.handlingProject); // Set the handling project for the officer
-            approvedOfficer.setAssignedManager(this); // Set the assigned manager for the officer
+            approvedOfficer.setHandlingProject(this.handlingProject);
+            approvedOfficer.setAssignedManager(this);
             handlingProject.addOfficer(approvedOfficer);
             System.out.println("Application for " + approvedOfficer.getName() + " (NRIC: " + approvedOfficer.getNRIC() + ") has been approved.");
         } else if (newStatus == RegisterStatus.UNSUCCESSFUL) {
@@ -161,16 +240,21 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
-
+    /**
+     * Handles a public application for a BTO project. If the application is
+     * approved and there are remaining units of the applied flat type, the
+     * application status is updated to successful.
+     *
+     * @param application The {@link Application} to handle.
+     * @param newStatus   The new status for the application ({@link ApplicationStatus#SUCCESSFUL} or {@link ApplicationStatus#UNSUCCESSFUL}).
+     */
     public void handleApplication(Application application, ApplicationStatus newStatus) {
         if (application.getApplicationStatus() == ApplicationStatus.SUCCESSFUL || application.getApplicationStatus() == ApplicationStatus.UNSUCCESSFUL || application.getApplicationStatus() == ApplicationStatus.BOOKED) {
             System.out.println("The application (ID: " + application.getApplicationId() + ") has already been processed.");
             return;
         }
-
         BTOProject project = application.getProjectApplied();
         FlatType appliedFlatType = application.getAppliedFlatType();
-
         if (newStatus == ApplicationStatus.SUCCESSFUL) {
             if (project.getRemainingUnits().containsKey(appliedFlatType) && project.getRemainingUnits().get(appliedFlatType) > 0) {
                 application.setApplicationStatus(ApplicationStatus.SUCCESSFUL);
@@ -187,6 +271,12 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Finds an application by its ID among the projects managed by this manager.
+     *
+     * @param applicationId The ID of the application to find.
+     * @return The {@link Application} object if found, otherwise null.
+     */
     public Application findApplicationById(int applicationId) {
         List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
         if (allProjects != null) {
@@ -206,6 +296,12 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         return null;
     }
 
+    /**
+     * Finds an enquiry by its ID among the projects managed by this manager.
+     *
+     * @param enquiryId The ID of the enquiry to find.
+     * @return The {@link Enquiry} object if found, otherwise null.
+     */
     public Enquiry findEnquiryById(int enquiryId) {
         List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
         if (allProjects != null) {
@@ -222,9 +318,18 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
                 }
             }
         }
-        return null; // Enquiry not found for this manager's projects
+        return null;
     }
 
+    /**
+     * Reviews a withdrawal application for a given application ID. It checks if
+     * the application exists, if a withdrawal has been requested and not yet
+     * approved. If so, it prompts the manager for approval and updates the
+     * application status and the project's application list accordingly.
+     *
+     * @param scanner       The {@link Scanner} object to read user input.
+     * @param applicationId The ID of the application for which to review the withdrawal request.
+     */
     public void reviewWithdrawalApplication(Scanner scanner, int applicationId) {
         Application application = findApplicationById(applicationId);
 
@@ -238,9 +343,7 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
             }
             return;
         }
-
-        BTOProject project = application.getProjectApplied(); // Get the project for updating the applications list
-
+        BTOProject project = application.getProjectApplied();
         System.out.println("\n--- Reviewing Withdrawal Request ---");
         if (application.getApplicant() != null) {
             System.out.println("Application ID: " + application.getApplicationId());
@@ -248,7 +351,7 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
                     " (NRIC: " + application.getApplicant().getNRIC() + ")");
             System.out.println("Project Applied: " + project.getName());
             System.out.println("Flat Type Applied: " + application.getAppliedFlatType());
-            System.out.println("Withdrawal Requested On: [Implementation for Date/Time]"); // You might want to store the request date
+            System.out.println("Withdrawal Requested On: [Implementation for Date/Time]");
         } else {
             System.out.println("Application ID: " + application.getApplicationId());
             System.out.println("Applicant: <NULL> - Potential Data Error");
@@ -256,10 +359,8 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
             System.out.println("Flat Type Applied: " + application.getAppliedFlatType());
             System.out.println("Withdrawal Requested On: [Implementation for Date/Time]");
         }
-
         System.out.print("Approve withdrawal for Application ID " + application.getApplicationId() + "? (yes/no): ");
         String response = scanner.nextLine().trim().toLowerCase();
-
         if (response.equals("yes")) {
             application.setWithdrawalApproved(true);
             if (project != null && project.getApplications().contains(application)) {
@@ -274,11 +375,17 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
             }
             System.out.println("Withdrawal approved for Application ID " + application.getApplicationId() + ".");
         } else {
-            application.setWithdrawalRequested(false); // Reset request if rejected
+            application.setWithdrawalRequested(false);
             System.out.println("Withdrawal rejected for Application ID " + application.getApplicationId() + ".");
         }
     }
 
+    /**
+     * Displays the details of a specific enquiry, including the enquiry ID,
+     * project name, applicant's information, the enquiry text, and any reply.
+     *
+     * @param enquiry The {@link Enquiry} object to view.
+     */
     public void viewEnquiryDetails(Enquiry enquiry) {
         if (enquiry != null) {
             System.out.println("Enquiry ID: " + enquiry.getEnquiryId());
@@ -290,12 +397,19 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
             } else {
                 System.out.println("Reply: [Not yet replied]");
             }
-            System.out.println("Submitted On: [Implementation for Date/Time]"); // Consider adding submission time
         } else {
             System.out.println("Enquiry not found.");
         }
     }
 
+    /**
+     * Replies to a specific enquiry. The reply is stored in the {@link Enquiry} object.
+     * This method also verifies if the enquiry belongs to the project currently
+     * being handled by the manager.
+     *
+     * @param enquiry  The {@link Enquiry} to reply to.
+     * @param response The reply text.
+     */
     private void replyEnquiry(Enquiry enquiry, String response) {
         if (this.handlingProject == null) {
             System.out.println("You are not assigned to any project.");
@@ -309,6 +423,12 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         System.out.println("Reply sent to applicant (Enquiry ID: " + enquiry.getEnquiryId() + "): " + response);
     }
 
+    /**
+     * Sets the project that this manager is currently handling. This allows
+     * the manager to perform actions specific to that project.
+     *
+     * @param project The {@link BTOProject} to set as the handling project.
+     */
     public void setHandlingProject(BTOProject project) {
         if (this.handlingProject != null) {
             System.out.println("You are already handling project: " + this.handlingProject.getName());
@@ -322,6 +442,14 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Generates a booking report based on a list of applications, with optional
+     * filtering by marital status and flat type.
+     *
+     * @param applications    The list of {@link Application} objects to include in the report.
+     * @param maritalFilter   An optional marital status to filter by (e.g., "SINGLE", "MARRIED"). If null, no marital filter is applied.
+     * @param flatTypeFilter  An optional flat type to filter by (e.g., "TWOROOM", "THREEROOM"). If null, no flat type filter is applied.
+     */
     public void generateBookingReport(List<Application> applications, String maritalFilter, String flatTypeFilter) {
         System.out.println("\n--- Booking Report for Project: " + handlingProject.getName() + " ---");
         if (maritalFilter != null) {
@@ -335,23 +463,33 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
             System.out.println("No booked applicants found based on the applied filters (if any).");
             return;
         }
-
         System.out.println(String.format("%-15s %-10s %-12s %-10s %-15s", "Applicant Name", "Flat Type", "Project", "Age", "Marital Status"));
         System.out.println("------------------------------------------------------------------");
-
         for (Application app : applications) {
             Applicant applicant = app.getApplicant();
-            System.out.println(String.format("%-15s %-10s %-12s %-10d %-15s",
-                    applicant.getName(),
-                    app.getAppliedFlatType(),
-                    handlingProject.getName(),
-                    applicant.getAge(),
-                    applicant.getMaritalStatus()));
+            boolean maritalMatch = (maritalFilter == null) || applicant.getMaritalStatus().toString().equalsIgnoreCase(maritalFilter);
+            boolean flatTypeMatch = (flatTypeFilter == null) || app.getAppliedFlatType().toString().equalsIgnoreCase(flatTypeFilter);
+
+            if (maritalMatch && flatTypeMatch && app.getApplicationStatus() == ApplicationStatus.BOOKED) {
+                System.out.println(String.format("%-15s %-10s %-12s %-10d %-15s",
+                        applicant.getName(),
+                        app.getAppliedFlatType(),
+                        handlingProject.getName(),
+                        applicant.getAge(),
+                        applicant.getMaritalStatus()));
+            }
         }
         System.out.println("------------------------------------------------------------------");
-        System.out.println("Total Booked Applicants: " + applications.size());
+        System.out.println("Total Booked Applicants (after filter): " + applications.stream().filter(app -> app.getApplicationStatus() == ApplicationStatus.BOOKED).count());
     }
 
+    /**
+     * Allows the manager to edit various details of a specified BTO project,
+     * such as neighborhood, remaining units, application dates, and maximum officers.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     * @param project The {@link BTOProject} to be edited.
+     */
     public void editProjectDetails(Scanner scanner, BTOProject project) {
         int choice;
         do {
@@ -417,6 +555,13 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         } while (true);
     }
 
+    /**
+     * Allows the manager to edit the remaining number of units for each flat type
+     * in a specified BTO project.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     * @param project The {@link BTOProject} for which to edit the remaining units.
+     */
     private void editRemainingUnits(Scanner scanner, BTOProject project) {
         int choice;
         do {
@@ -463,87 +608,83 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
                 }
             } else {
                 System.out.println("Invalid input. Please enter a number.");
-                scanner.nextLine(); // Consume invalid input
+                scanner.nextLine();
             }
         } while (true);
     }
 
-
-
-
-
-
-    // UI Handling Functions
-
+    /**
+     * Handles the process of creating a new BTO project by prompting the manager
+     * for the required details through the console.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleCreateProject(Scanner scanner){
         System.out.println("\n--- Create New Project ---");
         System.out.print("Enter project name: ");
         String name = scanner.nextLine();
         System.out.print("Enter neighborhood: ");
         String neighborhood = scanner.nextLine();
-
         Map<FlatType, Integer> remainingUnits = new HashMap<>();
-
         System.out.print("Are there 2-Room flats in this project? (yes/no): ");
         if (scanner.nextLine().trim().equalsIgnoreCase("yes")) {
             System.out.println("Enter remaining units for 2-Room flats: ");
             if (scanner.hasNextInt()) {
                 remainingUnits.put(FlatType.TWOROOM, scanner.nextInt());
-                scanner.nextLine(); // Consume newline
+                scanner.nextLine();
             } else {
                 System.out.println("Invalid input for 2-Room units.");
-                scanner.nextLine(); // Consume invalid input
+                scanner.nextLine();
                 return;
             }
         }
-
         System.out.print("Are there 3-Room flats in this project? (yes/no): ");
         if (scanner.nextLine().trim().equalsIgnoreCase("yes")) {
             System.out.println("Enter remaining units for 3-Room flats: ");
             if (scanner.hasNextInt()) {
                 remainingUnits.put(FlatType.THREEROOM, scanner.nextInt());
-                scanner.nextLine(); // Consume newline
+                scanner.nextLine();
             } else {
                 System.out.println("Invalid input for 3-Room units.");
-                scanner.nextLine(); // Consume invalid input
+                scanner.nextLine();
                 return;
             }
         }
-
         if (remainingUnits.isEmpty()) {
             System.out.println("Project must have remaining units for at least one flat type.");
             return;
         }
-
         System.out.print("Enter application open date (YYYY-MM-DD): ");
         String openDateStr = scanner.nextLine();
         Date openDate = parseDate(openDateStr);
         if (openDate == null) return;
-
         System.out.print("Enter application close date (YYYY-MM-DD): ");
         String closeDateStr = scanner.nextLine();
         Date closeDate = parseDate(closeDateStr);
         if (closeDate == null) return;
-
         System.out.print("Enter maximum number of officers for this project (up to " + MAX_OFFICERS_PROJECT + "): ");
         int maxOfficers;
         if (scanner.hasNextInt()) {
             maxOfficers = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
+            scanner.nextLine();
             if (maxOfficers > MAX_OFFICERS_PROJECT || maxOfficers < 0) {
                 System.out.println("Invalid number of officers.");
                 return;
             }
         } else {
             System.out.println("Invalid input for number of officers.");
-            scanner.nextLine(); // Consume invalid input
+            scanner.nextLine();
             return;
         }
-
         createProject(name, neighborhood, remainingUnits, openDate, closeDate, maxOfficers);
-        // The createProject method now handles setting the first project as handling project.
     }
 
+    /**
+     * Handles the process of deleting an existing BTO project by prompting the
+     * manager to select a project from the available list.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleDeleteProject(Scanner scanner) {
         System.out.println("\n--- Delete Project ---");
         List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
@@ -566,6 +707,12 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Handles the process of editing an existing BTO project by prompting the
+     * manager to select a project from the available list.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleEditProject(Scanner scanner) {
         System.out.println("\n--- Edit Project ---");
         List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
@@ -584,10 +731,16 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         if (projectToEdit != null) {
             editProjectDetails(scanner, projectToEdit);
         } else {
-            System.out.println("Error: Project with name '" + projectNameToEdit + "' not found.");
+            System.out.println("Error: Project with name '" +projectNameToEdit + "' not found.");
         }
     }
 
+    /**
+     * Handles the process of setting the currently handling project for the manager
+     * by prompting the manager to select a project from the available list.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleSetHandlingProject(Scanner scanner) {
         System.out.println("\n--- Set Handling Project ---");
         System.out.println("All Available Projects:");
@@ -612,6 +765,12 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Handles the process of changing the visibility status of the currently
+     * handling project by prompting the manager for the desired status.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleChangeHandlingProjectVisibility(Scanner scanner) {
         System.out.println("\n--- Change Handling Project Visibility ---");
         if (handlingProject == null) {
@@ -630,10 +789,20 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Handles the display of all officer registration applications by calling
+     * the {@link #viewAllOfficerApplications()} method.
+     */
     public void handleViewAllOfficerApplications() {
         viewAllOfficerApplications();
     }
 
+    /**
+     * Handles the process of reviewing and approving or rejecting officer
+     * registration applications for the currently handling project.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleHandleOfficerRegistration(Scanner scanner) {
         System.out.println("\n--- Handle Officer Registration ---");
         if (handlingProject == null) {
@@ -651,7 +820,7 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         System.out.print("Enter the Register ID of the application to handle: ");
         if (scanner.hasNextInt()) {
             int registerIdToHandle = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
+            scanner.nextLine();
             RegistrationApplication selectedApplication = null;
             for (RegistrationApplication app : handlingProject.getOfficerApplications()) {
                 if (app.getRegisterId() == registerIdToHandle && app.getRegisterStatusStatus() == RegisterStatus.Pending) {
@@ -678,6 +847,12 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Handles the process of viewing and approving or rejecting public applications
+     * for the currently handling project.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleHandleApplication(Scanner scanner) {
         System.out.println("\n--- Handle Application / View All Applications ---");
         if (handlingProject == null) {
@@ -731,6 +906,12 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Handles the process of reviewing pending withdrawal requests across all
+     * projects managed by this manager.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleReviewWithdrawalRequests(Scanner scanner) {
         System.out.println("\n--- Review Withdrawal Requests ---");
         List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
@@ -770,7 +951,7 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         System.out.print("Enter the Application ID to review (0 to go back): ");
         if (scanner.hasNextInt()) {
             int applicationIdToReview = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
+            scanner.nextLine();
             if (applicationIdToReview > 0) {
                 reviewWithdrawalApplication(scanner, applicationIdToReview);
             } else if (applicationIdToReview != 0) {
@@ -778,19 +959,23 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
             }
         } else {
             System.out.println("Invalid input.");
-            scanner.nextLine(); // Consume invalid input
+            scanner.nextLine();
         }
     }
 
+    /**
+     * Handles the process of viewing all enquiries across all BTO projects.
+     * Allows the manager to select an enquiry to view its details.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleViewAllEnquiries(Scanner scanner) {
         System.out.println("\n--- View All Enquiries ---");
         List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
-
         if (allProjects.isEmpty()) {
             System.out.println("No projects with enquiries found.");
             return;
         }
-
         List<Enquiry> allEnquiries = new ArrayList<>();
         for (BTOProject project : allProjects) {
             List<Enquiry> enquiries = project.getEnquiries();
@@ -798,21 +983,18 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
                 allEnquiries.addAll(enquiries);
             }
         }
-
         if (allEnquiries.isEmpty()) {
             System.out.println("No enquiries found across all projects.");
             return;
         }
-
         System.out.println("All Enquiries:");
         for (Enquiry enquiry : allEnquiries) {
             System.out.println("- Enquiry ID: " + enquiry.getEnquiryId() + ", Project: " + enquiry.getProject().getName() + ", From: " + enquiry.getApplicant().getName());
         }
-
         System.out.print("Enter the Enquiry ID to view details (0 to go back): ");
         if (scanner.hasNextInt()) {
             int enquiryIdToView = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
+            scanner.nextLine();
             if (enquiryIdToView > 0) {
                 Enquiry enquiry = findEnquiryById(enquiryIdToView);
                 viewEnquiryDetails(enquiry);
@@ -821,10 +1003,17 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
             }
         } else {
             System.out.println("Invalid input.");
-            scanner.nextLine(); // Consume invalid input
+            scanner.nextLine();
         }
     }
 
+    /**
+     * Handles the process of viewing enquiries specifically for the project
+     * currently being handled by the manager. Allows the manager to select
+     * an enquiry to view its details.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleViewOwnEnquiries(Scanner scanner) {
         System.out.println("\n--- View Enquiries for Handling Project ---");
         if (handlingProject == null) {
@@ -846,7 +1035,7 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         System.out.print("Enter the Enquiry ID to view details (0 to go back): ");
         if (scanner.hasNextInt()) {
             int enquiryIdToView = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
+            scanner.nextLine();
             if (enquiryIdToView > 0) {
                 Enquiry targetEnquiry = null;
                 for (Enquiry enquiry : handlingProject.getEnquiries()) {
@@ -861,10 +1050,16 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
             }
         } else {
             System.out.println("Invalid input.");
-            scanner.nextLine(); // Consume invalid input
+            scanner.nextLine();
         }
     }
 
+    /**
+     * Handles the process of replying to an enquiry for the project currently
+     * being handled by the manager. Prompts the manager for the enquiry ID and the reply text.
+     *
+     * @param scanner The {@link Scanner} object to read user input.
+     */
     public void handleReplyEnquiry(Scanner scanner) {
         System.out.println("\n--- Reply Enquiry ---");
         if (handlingProject == null) {
@@ -903,6 +1098,16 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Handles the process of viewing all BTO projects in the system. It retrieves
+     * all projects from the {@link ProjectRegistry}, applies user-specific filters
+     * for location and flat type, and sorts the projects based on the user's
+     * preferred sorting order. It then displays the details of the filtered and
+     * sorted projects. Additionally, it provides an interactive menu to allow the
+     * manager to modify their project viewing filters and sorting preferences.
+     *
+     * @param scanner The {@link Scanner} object to read user input for filtering and sorting options.
+     */
     public void handleViewAllProjects(Scanner scanner) {
         System.out.println("\n--- View All Projects ---");
         List<BTOProject> allProjects = ProjectRegistry.getAllProjects();
@@ -1010,6 +1215,14 @@ public class HDBManager extends User implements OfficerApplicationManager, Proje
         }
     }
 
+    /**
+     * Handles the generation of a booking report for the project currently being
+     * handled by the manager. It allows the manager to filter the report by
+     * marital status and flat type of the applicants who have successfully booked a flat.
+     * The generated report is displayed on the console.
+     *
+     * @param scanner The {@link Scanner} object to read user input for report filtering options.
+     */
     public void handleGenerateReport(Scanner scanner) {
         System.out.println("\n--- Generate Booking Report ---");
 

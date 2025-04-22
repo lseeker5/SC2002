@@ -3,20 +3,51 @@ package BTO_Management_System;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Represents an applicant in the BTO management system.
+ * Applicants can browse available projects, apply for projects they are eligible for,
+ * view the status of their application, submit enquiries about projects,
+ * view their submitted enquiries and any replies, and request to withdraw their application.
+ */
 public class Applicant extends User implements ProjectApplicant, Enquirer, EnquiryViewer, WithdrawalRequester {
+    /**
+     * The current application submitted by this applicant.
+     * This can be null if the applicant has not applied or their application has been withdrawn.
+     */
     protected Application application;
+    /**
+     * A list of enquiries submitted by this applicant.
+     */
     private List<Enquiry> enquiries;
 
+    /**
+     * Constructs a new Applicant with the specified details.
+     *
+     * @param name          The full name of the applicant.
+     * @param nric          The National Registration Identity Card (NRIC) of the applicant.
+     * @param age           The current age of the applicant.
+     * @param maritalStatus The marital status of the applicant (e.g., SINGLE, MARRIED).
+     */
     public Applicant(String name, String nric, int age, MaritalStatus maritalStatus) {
         super(name, nric, age, maritalStatus);
         this.enquiries = new ArrayList<>();
     }
 
+    /**
+     * Returns the role of the user, which is "Applicant" for this class.
+     *
+     * @return A String representing the user's role.
+     */
     @Override
     public String getRole() {
         return "Applicant";
     }
 
+    /**
+     * Retrieves the list of enquiries submitted by this applicant.
+     *
+     * @return A List of Enquiry objects.
+     */
     @Override
     public List<Enquiry> getEnquiries() {
         return this.enquiries;
@@ -24,6 +55,12 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
 
     //Private Methods (helpers)
 
+    /**
+     * Retrieves a list of BTO projects that are currently available and for which
+     * the applicant is eligible to apply. The list is sorted alphabetically by project name.
+     *
+     * @return A List of available and eligible BTOProject objects.
+     */
     private List<BTOProject> getAvailableProjects() {
         List<BTOProject> filtered = new ArrayList<>();
         for (BTOProject project : ProjectRegistry.getAllProjects()) {
@@ -35,6 +72,13 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         return filtered;
     }
 
+    /**
+     * Checks if the applicant is eligible to apply for a given BTO project based on their age and marital status,
+     * and the flat types offered by the project.
+     *
+     * @param project The BTOProject to check eligibility for.
+     * @return true if the applicant is eligible, false otherwise.
+     */
     protected boolean isEligibleToApply(BTOProject project) {
         if (!project.isVisible()) return false;
         if (age >= 35 && maritalStatus == MaritalStatus.SINGLE) {
@@ -45,6 +89,10 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         return false;
     }
 
+    /**
+     * Displays the list of BTO projects that are currently available and for which
+     * the applicant is eligible. If no projects are available, a corresponding message is shown.
+     */
     public void viewAvailableProjects() {
         List<BTOProject> availableProjects = getAvailableProjects();
         if (availableProjects.isEmpty()) {
@@ -55,6 +103,13 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         }
     }
 
+    /**
+     * Applies for a specified project with a chosen flat type. Eligibility checks are performed
+     * before creating and submitting the application.
+     *
+     * @param project   The ProjectViewable object representing the BTO project to apply for.
+     * @param flatType  The desired flat type for the application.
+     */
     @Override
     public void apply(ProjectViewable project, FlatType flatType) {
         if (!(project instanceof BTOProject)) {
@@ -88,13 +143,16 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
                 System.out.println("Married applicants must be 21 years old and above to apply.");
                 return;
             }
-            // Married applicants 21 and above can apply for any flat type, so no further checks needed here for flat type.
         }
         application = new Application(this, btoProject, ApplicationStatus.PENDING, flatType);
         btoProject.getApplications().add(application);
         System.out.println("Successfully applied for project: " + btoProject.getName() + " - " + flatType);
     }
 
+    /**
+     * Displays the details of the project for which the applicant has currently applied.
+     * If the applicant has not applied for any project, a corresponding message is shown.
+     */
     @Override
     public void viewAppliedProject() {
         if (application == null || application.getApplicationStatus() == null) {
@@ -105,6 +163,10 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         System.out.println(application.getProjectApplied().getDetails());
     }
 
+    /**
+     * Displays the current status of the applicant's application.
+     * If the applicant has not applied for any project, a corresponding message is shown.
+     */
     @Override
     public void viewApplicationStatus(){
         if (this.application == null){
@@ -115,6 +177,10 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         System.out.println("Your current application status for project " + this.application.getProjectApplied().getName() + " is:" + currentStatus);
     }
 
+    /**
+     * Allows the applicant to request a withdrawal of their current application,
+     * provided the application has not already been booked or a withdrawal request is pending.
+     */
     @Override
     public void requestWithdrawApplication() {
         if (application == null) {
@@ -133,10 +199,22 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         System.out.println("Your withdrawal request has been submitted and is pending manager approval.");
     }
 
+    /**
+     * Checks if the applicant has submitted any enquiries.
+     *
+     * @return true if the list of enquiries is empty, false otherwise.
+     */
     private boolean enquiryIsEmpty(){
         return enquiries.isEmpty();
     }
 
+    /**
+     * Submits a new enquiry about a specified project. The enquiry is associated with the applicant
+     * and the project, and is added to both the applicant's list of enquiries and the project's list of enquiries.
+     *
+     * @param project     The ProjectViewable object representing the BTO project the enquiry is about.
+     * @param enquiryText The text content of the enquiry.
+     */
     @Override
     public void submitEnquiry(ProjectViewable project, String enquiryText) {
         if (!(project instanceof BTOProject)) {
@@ -155,6 +233,12 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         System.out.println("Enquiry submitted. ID: " + newEnquiry.getEnquiryId());
     }
 
+    /**
+     * Finds an enquiry submitted by this applicant based on its unique ID.
+     *
+     * @param enquiryId The ID of the enquiry to find.
+     * @return The Enquiry object if found, otherwise null.
+     */
     @Override
     public Enquiry findEnquiryById(int enquiryId) {
         for (Enquiry enquiry : enquiries) {
@@ -165,6 +249,9 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         return null;
     }
 
+    /**
+     * Displays a list of all enquiries submitted by this applicant, showing their details.
+     */
     @Override
     public void showAllEnquiries() {
         System.out.println("The following are all your enquiries:");
@@ -174,6 +261,11 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         }
     }
 
+    /**
+     * Views the details of a specific enquiry submitted by this applicant, including any reply from an officer.
+     *
+     * @param enquiryId The ID of the enquiry to view.
+     */
     @Override
     public void viewEnquiry(int enquiryId) {
         Enquiry enquiry = findEnquiryById(enquiryId);
@@ -190,10 +282,22 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         }
     }
 
+    /**
+     * Checks if an enquiry with the given ID exists in the applicant's list of enquiries.
+     *
+     * @param enquiryId The ID of the enquiry to check for.
+     * @return true if an enquiry with the ID exists, false otherwise.
+     */
     private boolean containsEnquiry(int enquiryId){
         return findEnquiryById(enquiryId) != null;
     }
 
+    /**
+     * Allows the applicant to edit the text of an existing enquiry.
+     *
+     * @param enquiryId The ID of the enquiry to edit.
+     * @param newText   The new text for the enquiry.
+     */
     private void editEnquiry(int enquiryId, String newText) {
         Enquiry enquiry = findEnquiryById(enquiryId);
         if (enquiry != null) {
@@ -204,6 +308,12 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         }
     }
 
+    /**
+     * Allows the applicant to delete an existing enquiry. The enquiry is removed from both
+     * the applicant's list and the project's list of enquiries.
+     *
+     * @param enquiryId The ID of the enquiry to delete.
+     */
     private void deleteEnquiry(int enquiryId) {
         Iterator<Enquiry> iterator = enquiries.iterator();
         while (iterator.hasNext()) {
@@ -217,6 +327,15 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         }
     }
 
+    /**
+     * Filters a list of BTO projects based on specified locations and flat types.
+     * If the location or flat type lists are empty, no filtering is applied for that criteria.
+     *
+     * @param projects   The list of BTOProject objects to filter.
+     * @param locations  A list of neighborhood locations to filter by. An empty list means no location filter.
+     * @param flatTypes  A list of FlatType enums to filter by. An empty list means no flat type filter.
+     * @return A new list of BTOProject objects that match the filter criteria.
+     */
     private List<BTOProject> filterProjects(List<BTOProject> projects, List<String> locations, List<FlatType> flatTypes) {
         return projects.stream()
                 .filter(p -> locations.isEmpty() || locations.contains(p.getNeighborhood()))
@@ -224,6 +343,15 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Sorts a list of BTO projects based on the specified sorting order.
+     * Supports sorting by alphabetical order of project name, location, or the first flat type offered.
+     * Defaults to alphabetical sorting if no or an invalid sorting order is provided.
+     *
+     * @param projects The list of BTOProject objects to sort.
+     * @param sortBy   A String indicating the sorting order ("ALPHABETICAL", "LOCATION", "FLAT_TYPE").
+     * @return The sorted list of BTOProject objects.
+     */
     private List<BTOProject> sortProjects(List<BTOProject> projects, String sortBy) {
         if (sortBy == null || sortBy.equalsIgnoreCase("ALPHABETICAL")) {
             projects.sort(Comparator.comparing(BTOProject::getName));
@@ -241,6 +369,12 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
 
     // UI Handling Functions
 
+    /**
+     * Handles the display of available BTO projects to the applicant, including options for filtering
+     * by location and flat type, and sorting the results. It interacts with the user through the Scanner.
+     *
+     * @param scanner The Scanner object to read user input for filtering and sorting options.
+     */
     public void handleViewAvailableProjects(Scanner scanner) {
         System.out.println("\n--- View Available Projects ---");
         List<BTOProject> allAvailableProjects = getAvailableProjects();
@@ -342,18 +476,31 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
 
             } else {
                 System.out.println("Invalid input.");
-                scanner.nextLine();
+                scanner.nextLine(); // Consume invalid input
             }
         }
     }
 
+    /**
+     * Handles the display of the applicant's current application status.
+     */
     public void handleViewApplicationStatus(){
         viewApplicationStatus();
     }
 
+    /**
+     * Handles the display of the details of the project the applicant has applied for.
+     */
     public void handleViewAppliedProject(){
         viewAppliedProject();
     }
+
+    /**
+     * Handles the process of applying for a BTO project. It displays available projects,
+     * prompts the applicant to select a project and a flat type, and then submits the application.
+     *
+     * @param scanner The Scanner object to read user input.
+     */
     public void handleApplyForProject(Scanner scanner) {
         System.out.println("\n--- Apply for Project ---");
         if (this.application != null) {
@@ -378,7 +525,7 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         System.out.print("Enter the number of rooms (2 / 3): ");
         if (scanner.hasNextInt()) {
             int numRooms = scanner.nextInt();
-            scanner.nextLine();
+            scanner.nextLine(); // Consume newline
             FlatType flatType = null;
             if (numRooms == 2) {
                 flatType = FlatType.TWOROOM;
@@ -392,10 +539,16 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
             apply((ProjectViewable) targetProject, flatType);
         } else {
             System.out.println("Error: Invalid input for room number.");
-            scanner.nextLine();
+            scanner.nextLine(); // Consume invalid input
         }
     }
 
+    /**
+     * Handles the submission of a new enquiry by the applicant for a specific project.
+     * Prompts the user for the project name and the enquiry text.
+     *
+     * @param scanner The Scanner object to read user input.
+     */
     public void handleSubmitEnquiry(Scanner scanner) {
         System.out.println("\n--- Submit Enquiry ---");
         System.out.print("Enter the name of the project for your enquiry: ");
@@ -409,10 +562,15 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
 
         System.out.println("Please enter the text of your enquiry:");
         String enquiryText = scanner.nextLine();
-        // Pass the BTOProject object as a ProjectViewable
-        submitEnquiry((ProjectViewable) targetProject, enquiryText);
+        submitEnquiry(targetProject, enquiryText);
     }
 
+    /**
+     * Handles the management of the applicant's enquiries, providing options to edit, delete,
+     * and view replies to their enquiries.
+     *
+     * @param scanner The Scanner object to read user input for the management options.
+     */
     public void handleManageEnquiries(Scanner scanner) {
         if (enquiryIsEmpty()) {
             System.out.println("You have no enquiries yet!");
@@ -452,18 +610,24 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
             } else {
                 System.out.println("Invalid input. Please enter a number.");
                 scanner.nextLine(); // Consume invalid input
-                choice = -1; // To continue the loop
+                choice = -1;
             }
         } while (true);
     }
 
+    /**
+     * Handles the process of editing an existing enquiry by prompting the user for the ID
+     * of the enquiry to edit and the new text.
+     *
+     * @param scanner The Scanner object to read user input.
+     */
     private void handleEditEnquiry(Scanner scanner) {
         System.out.println("\n--- Edit Enquiry ---");
         showAllEnquiries();
         System.out.print("Enter the ID of the enquiry you want to edit: ");
         if (scanner.hasNextInt()) {
             int enquiryId = scanner.nextInt();
-            scanner.nextLine();
+            scanner.nextLine(); // Consume newline
             if (findEnquiryById(enquiryId) != null) {
                 System.out.print("Enter your updated enquiry text: ");
                 String newText = scanner.nextLine();
@@ -473,17 +637,23 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
             }
         } else {
             System.out.println("Invalid input for enquiry ID.");
-            scanner.nextLine();
+            scanner.nextLine(); // Consume invalid input
         }
     }
 
+    /**
+     * Handles the process of deleting an existing enquiry by prompting the user for the ID
+     * of the enquiry to delete.
+     *
+     * @param scanner The Scanner object to read user input.
+     */
     private void handleDeleteEnquiry(Scanner scanner) {
         System.out.println("\n--- Delete Enquiry ---");
         showAllEnquiries();
         System.out.print("Enter the ID of the enquiry you want to delete: ");
         if (scanner.hasNextInt()) {
             int enquiryId = scanner.nextInt();
-            scanner.nextLine();
+            scanner.nextLine(); // Consume newline
             if (findEnquiryById(enquiryId) != null) {
                 deleteEnquiry(enquiryId);
             } else {
@@ -495,20 +665,32 @@ public class Applicant extends User implements ProjectApplicant, Enquirer, Enqui
         }
     }
 
+    /**
+     * Handles the process of viewing the reply to a specific enquiry by prompting the user
+     * for the ID of the enquiry.
+     *
+     * @param scanner The Scanner object to read user input.
+     */
     private void handleViewEnquiryReply(Scanner scanner) {
         System.out.println("\n--- View Enquiry Reply ---");
         showAllEnquiries();
         System.out.print("Enter the ID of the enquiry you want to view the reply for: ");
         if (scanner.hasNextInt()) {
             int enquiryId = scanner.nextInt();
-            scanner.nextLine();
+            scanner.nextLine(); // Consume newline
             viewEnquiry(enquiryId);
         } else {
             System.out.println("Invalid input for enquiry ID.");
-            scanner.nextLine();
+            scanner.nextLine(); // Consume invalid input
         }
     }
 
+    /**
+     * Handles the process of requesting a withdrawal of the applicant's current application.
+     * Prompts the user for confirmation before submitting the withdrawal request.
+     *
+     * @param scanner The Scanner object to read user input for confirmation.
+     */
     public void handleRequestWithdrawal(Scanner scanner) {
         System.out.println("\n--- Request Withdrawal ---");
         System.out.print("Are you sure you want to request withdrawal? (yes/no): ");
