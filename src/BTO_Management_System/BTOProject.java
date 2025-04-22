@@ -2,7 +2,7 @@ package BTO_Management_System;
 
 import java.util.*;
 
-public class BTOProject {
+public class BTOProject implements ProjectViewable {
     private String name;
     private String neighborhood;
     private Map<FlatType, Integer> remainingUnits;
@@ -57,6 +57,7 @@ public class BTOProject {
     }
 
     // Methods
+    @Override
     public String getDetails() {
         String remainingUnitsString = remainingUnits.entrySet().stream()
                 .map(entry -> entry.getKey() + ": " + entry.getValue() + " units remaining")
@@ -67,7 +68,7 @@ public class BTOProject {
                 ", Remaining Units: " + remainingUnitsString;
     }
 
-
+    @Override
     public String getName() {
         return name;
     }
@@ -76,6 +77,7 @@ public class BTOProject {
         this.name = name;
     }
 
+    @Override
     public String getNeighborhood() {
         return this.neighborhood;
     }
@@ -132,21 +134,17 @@ public class BTOProject {
         return applications;
     }
 
+    @Override
+    public List<FlatType> getFlatTypes(){
+        return new ArrayList<>(this.remainingUnits.keySet());
+    }
+
     public List<Enquiry> getEnquiries() {
         return enquiries;
     }
 
     public List<Application> getSuccessfulApplications() {
         return successfulApplications;
-    }
-
-    public List<FlatType> getFlatTypes(){
-        Set<FlatType> set = this.remainingUnits.keySet();
-        List<FlatType> result = new ArrayList<>();
-        for (FlatType type : set){
-            result.add(type);
-        }
-        return result;
     }
 
     public int getMaxOfficers() {

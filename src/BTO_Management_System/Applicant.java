@@ -3,7 +3,7 @@ package BTO_Management_System;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class Applicant extends User {
+public class Applicant extends User implements ProjectApplicant, Enquirer, EnquiryViewer, WithdrawalRequester {
     protected Application application;
     private List<Enquiry> enquiries;
 
@@ -17,8 +17,9 @@ public class Applicant extends User {
         return "Applicant";
     }
 
+    @Override
     public List<Enquiry> getEnquiries() {
-        return enquiries;
+        return this.enquiries;
     }
 
     //Private Methods (helpers)
@@ -54,17 +55,23 @@ public class Applicant extends User {
         }
     }
 
-    protected void apply(BTOProject project, FlatType flatType) {
-        if (!getAvailableProjects().contains(project)) {
+    @Override
+    public void apply(ProjectViewable project, FlatType flatType) {
+        if (!(project instanceof BTOProject)) {
+            System.out.println("Error: Invalid project type for application.");
+            return;
+        }
+        BTOProject btoProject = (BTOProject) project;
+        if (!getAvailableProjects().contains(btoProject)) {
             System.out.println("You are not allowed to apply for this project based on your eligibility!");
             return;
         }
-        if (!project.getFlatTypes().contains(flatType)) {
-            System.out.println("The selected flat type (" + flatType + ") is not available for this project (" + project.getName() + ")!");
+        if (!btoProject.getFlatTypes().contains(flatType)) {
+            System.out.println("The selected flat type (" + flatType + ") is not available for this project (" + btoProject.getName() + ")!");
             return;
         }
-        if (!project.getRemainingUnits().containsKey(flatType) || project.getRemainingUnits().get(flatType) <= 0) {
-            System.out.println("The selected flat type (" + flatType + ") in project " + project.getName() + " is currently unavailable!");
+        if (!btoProject.getRemainingUnits().containsKey(flatType) || btoProject.getRemainingUnits().get(flatType) <= 0) {
+            System.out.println("The selected flat type (" + flatType + ") in project " + btoProject.getName() + " is currently unavailable!");
             return;
         }
         if (maritalStatus == MaritalStatus.SINGLE) {
@@ -83,11 +90,12 @@ public class Applicant extends User {
             }
             // Married applicants 21 and above can apply for any flat type, so no further checks needed here for flat type.
         }
-        application = new Application(this, project, ApplicationStatus.PENDING, flatType);
-        project.getApplications().add(application);
-        System.out.println("Successfully applied for project: " + project.getName() + " - " + flatType);
+        application = new Application(this, btoProject, ApplicationStatus.PENDING, flatType);
+        btoProject.getApplications().add(application);
+        System.out.println("Successfully applied for project: " + btoProject.getName() + " - " + flatType);
     }
 
+    @Override
     public void viewAppliedProject() {
         if (application == null || application.getApplicationStatus() == null) {
             System.out.println("You have not applied for any project yet!");
@@ -97,6 +105,7 @@ public class Applicant extends User {
         System.out.println(application.getProjectApplied().getDetails());
     }
 
+    @Override
     public void viewApplicationStatus(){
         if (this.application == null){
             System.out.println("You have not applied to any project yet!");
@@ -106,7 +115,8 @@ public class Applicant extends User {
         System.out.println("Your current application status for project " + this.application.getProjectApplied().getName() + " is:" + currentStatus);
     }
 
-    private void requestWithdrawApplication() {
+    @Override
+    public void requestWithdrawApplication() {
         if (application == null) {
             System.out.println("You do not have any application yet!");
             return;
@@ -127,19 +137,36 @@ public class Applicant extends User {
         return enquiries.isEmpty();
     }
 
-    public void submitEnquiry(BTOProject project, String enquiryText) {
+    @Override
+    public void submitEnquiry(ProjectViewable project, String enquiryText) {
+        if (!(project instanceof BTOProject)) {
+            System.out.println("Error: Invalid project type for enquiry.");
+            return;
+        }
+        BTOProject btoProject = (BTOProject) project;
         List<BTOProject> availableProjects = getAvailableProjects();
-        if (!availableProjects.contains(project)) {
+        if (!availableProjects.contains(btoProject)) {
             System.out.println("Invalid or unavailable project for enquiry!");
             return;
         }
-        Enquiry newEnquiry = new Enquiry(this, project, enquiryText);
+        Enquiry newEnquiry = new Enquiry(this, btoProject, enquiryText);
         enquiries.add(newEnquiry);
-        project.addEnquiry(newEnquiry);
+        btoProject.addEnquiry(newEnquiry);
         System.out.println("Enquiry submitted. ID: " + newEnquiry.getEnquiryId());
     }
 
-    private void showAllPersonalEnquiries() {
+    @Override
+    public Enquiry findEnquiryById(int enquiryId) {
+        for (Enquiry enquiry : enquiries) {
+            if (enquiry.getEnquiryId() == enquiryId) {
+                return enquiry;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public void showAllEnquiries() {
         System.out.println("The following are all your enquiries:");
         for (int i = 0; i < enquiries.size(); i++) {
             Enquiry enquiry = enquiries.get(i);
@@ -147,36 +174,33 @@ public class Applicant extends User {
         }
     }
 
-    private boolean containsEnquiry(int enquiryId){
-        for (Enquiry enquiry : enquiries){
-            if (enquiry.getEnquiryId() == enquiryId){
-                return true;
+    @Override
+    public void viewEnquiry(int enquiryId) {
+        Enquiry enquiry = findEnquiryById(enquiryId);
+        if (enquiry != null) {
+            System.out.println("Your enquiry information for enquiry: " + enquiryId + " is as follows:");
+            System.out.println(enquiry.getEnquiryDetails());
+            if (enquiry.getReplyText() != null) {
+                System.out.println("Officer Reply: " + enquiry.getReplyText());
+            } else {
+                System.out.println("No reply from officer yet.");
             }
+        } else {
+            System.out.println("Error: Invalid enquiry ID.");
         }
-        return false;
+    }
+
+    private boolean containsEnquiry(int enquiryId){
+        return findEnquiryById(enquiryId) != null;
     }
 
     private void editEnquiry(int enquiryId, String newText) {
-        for (Enquiry e : enquiries) {
-            if (e.getEnquiryId() == enquiryId) {
-                e.updateEnquiry(newText);
-                System.out.println("Enquiry updated successfully.");
-                return;
-            }
-        }
-    }
-
-    private void viewEnquiryReply(int enquiryId) {
-        System.out.println("Your enquiry reply information for enquiry: " + enquiryId + " is as follows:");
-        for (Enquiry enquiry : enquiries) {
-            if (enquiry.getEnquiryId() == enquiryId){
-                if (enquiry.getReplyText() != null) {
-                    System.out.println("Officer Reply: " + enquiry.getReplyText());
-                } else {
-                    System.out.println("No reply from officer yet.");
-                }
-                return;
-            }
+        Enquiry enquiry = findEnquiryById(enquiryId);
+        if (enquiry != null) {
+            enquiry.updateEnquiry(newText);
+            System.out.println("Enquiry updated successfully.");
+        } else {
+            System.out.println("Error: Invalid enquiry ID.");
         }
     }
 
@@ -364,7 +388,8 @@ public class Applicant extends User {
                 System.out.println("Error: Invalid room number. Please enter 2 or 3.");
                 return;
             }
-            apply(targetProject, flatType);
+            // Pass the BTOProject object as a ProjectViewable
+            apply((ProjectViewable) targetProject, flatType);
         } else {
             System.out.println("Error: Invalid input for room number.");
             scanner.nextLine();
@@ -384,7 +409,8 @@ public class Applicant extends User {
 
         System.out.println("Please enter the text of your enquiry:");
         String enquiryText = scanner.nextLine();
-        submitEnquiry(targetProject, enquiryText);
+        // Pass the BTOProject object as a ProjectViewable
+        submitEnquiry((ProjectViewable) targetProject, enquiryText);
     }
 
     public void handleManageEnquiries(Scanner scanner) {
@@ -396,7 +422,7 @@ public class Applicant extends User {
         int choice;
         do {
             System.out.println("\n--- Manage Enquiries ---");
-            showAllPersonalEnquiries();
+            showAllEnquiries();
             System.out.println("Choose an action:");
             System.out.println("1. Edit Enquiry");
             System.out.println("2. Delete Enquiry");
@@ -433,12 +459,12 @@ public class Applicant extends User {
 
     private void handleEditEnquiry(Scanner scanner) {
         System.out.println("\n--- Edit Enquiry ---");
-        showAllPersonalEnquiries();
+        showAllEnquiries();
         System.out.print("Enter the ID of the enquiry you want to edit: ");
         if (scanner.hasNextInt()) {
             int enquiryId = scanner.nextInt();
             scanner.nextLine();
-            if (containsEnquiry(enquiryId)) {
+            if (findEnquiryById(enquiryId) != null) {
                 System.out.print("Enter your updated enquiry text: ");
                 String newText = scanner.nextLine();
                 editEnquiry(enquiryId, newText);
@@ -453,12 +479,12 @@ public class Applicant extends User {
 
     private void handleDeleteEnquiry(Scanner scanner) {
         System.out.println("\n--- Delete Enquiry ---");
-        showAllPersonalEnquiries();
+        showAllEnquiries();
         System.out.print("Enter the ID of the enquiry you want to delete: ");
         if (scanner.hasNextInt()) {
             int enquiryId = scanner.nextInt();
             scanner.nextLine();
-            if (containsEnquiry(enquiryId)) {
+            if (findEnquiryById(enquiryId) != null) {
                 deleteEnquiry(enquiryId);
             } else {
                 System.out.println("Error: Invalid enquiry ID.");
@@ -471,16 +497,12 @@ public class Applicant extends User {
 
     private void handleViewEnquiryReply(Scanner scanner) {
         System.out.println("\n--- View Enquiry Reply ---");
-        showAllPersonalEnquiries();
+        showAllEnquiries();
         System.out.print("Enter the ID of the enquiry you want to view the reply for: ");
         if (scanner.hasNextInt()) {
             int enquiryId = scanner.nextInt();
             scanner.nextLine();
-            if (containsEnquiry(enquiryId)) {
-                viewEnquiryReply(enquiryId);
-            } else {
-                System.out.println("Error: Invalid enquiry ID.");
-            }
+            viewEnquiry(enquiryId);
         } else {
             System.out.println("Invalid input for enquiry ID.");
             scanner.nextLine();
